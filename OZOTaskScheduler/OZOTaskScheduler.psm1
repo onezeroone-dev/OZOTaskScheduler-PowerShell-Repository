@@ -3,8 +3,12 @@ Class OZOScheduledTask {
     Hidden [Boolean]$taskScheduled = $false
     Hidden [Boolean]$taskAtReboot  = $false
     Hidden [Boolean]$taskAtLogon   = $false
+    # PROPERTIES: Int32s
+    Hidden [Int32]$taskRandomDelay = 0
     # PROPERTIES: Lists
     Hidden [System.Collections.Generic.List[Microsoft.Management.Infrastructure.CimInstance]]$taskTriggers = @()
+    # PROPERTIES: PSCustomObjects
+    Hidden [PSCustomObject]$taskSchedules = @()
     # PROPERTIES: Strings
     Hidden [String]$taskName         = $null
     Hidden [String]$taskScript       = $null
@@ -13,24 +17,19 @@ Class OZOScheduledTask {
     Hidden [String]$taskWeekday      = $null
     Hidden [String]$taskStartTime    = $null
     Hidden [String]$taskUser         = $null
-    # PROPERTIES: Int32s
-    Hidden [Int32]$taskRandomDelay = 0
     # METHODS: Constructor method - New and Update overload
-    OZOScheduledTask($TaskName,$TaskScript,$TaskScriptParams,$TaskDir,$TaskScheduled,$TaskWeekday,$TaskStartTime,$TaskRandomDelay,$TaskUser,$TaskAtReboot,$TaskAtLogon) {
+    OZOScheduledTask($TaskName,$TaskScript,$TaskScriptParams,$TaskDir,$TaskScheduled,$TaskSchedules,$TaskUser,$TaskAtReboot,$TaskAtLogon) {
         # Set properties
         $this.taskName         = $TaskName
         $this.taskScript       = $TaskScript
         $this.taskScriptParams = $TaskScriptParams
         $this.taskDir          = $TaskDir
         $this.taskScheduled    = $TaskScheduled
-        $this.taskWeekday      = $TaskWeekday
-        $this.taskStartTime    = $TaskStartTime
-        $this.taskRandomDelay  = $TaskRandomDelay
         $this.taskAtReboot     = $TaskAtReboot
         $this.taskAtLogon      = $TaskAtLogon
         $this.taskUser         = $TaskUser
         # Determine if the configuration and environment validate
-        If (($this.ValidateConfiguration() -And $this.ValidateEnvironment()) -eq $true) {
+        If (($this.ValidateConfiguration($TaskSchedules) -And $this.ValidateEnvironment()) -eq $true) {
             # Determine if the task exists
             If ($this.TaskExists() -eq $true) {
                 # Task exists; remove and recreate
@@ -53,7 +52,7 @@ Class OZOScheduledTask {
         $this.RemoveTask()
     }
     # METHODS: Configuration validation method
-    Hidden [Boolean] ValidateConfiguration() {
+    Hidden [Boolean] ValidateConfiguration($TaskSchedules) {
         # Control variable
         [Boolean] $Return = $true
         # Determine if at least one trigger has been defined
@@ -66,6 +65,15 @@ Class OZOScheduledTask {
         If ($null -ne $this.taskStartTime -And [Boolean]($this.taskStartTime -As [DateTime]) -eq $false) {
             # TaskStartTime is not null and cannot be converted to a DateTime
             Write-OZOProvider -Message "The TaskStartTime parameter must be a valid time in the HH:MM AM/PM format. Please specify a valid time and try again." -Level "Error"
+            $Return = $false
+        }
+        # Determine if TaskSchedules can be converted from JSON
+        If ($null -ne $TaskSchedules -And [Boolean]($TaskSchedules | ConvertFrom-Json -ErrorAction SilentlyContinue) -eq $true) {
+            # TaskSchedules can be converted from JSON
+            $this.taskSchedules = $TaskSchedules | ConvertFrom-Json
+        } Else {
+            # TaskSchedules cannot be converted from JSON
+            Write-OZOProvider -Message "The TaskSchedules parameter must be a valid JSON string. Please specify a valid JSON string and try again." -Level "Error"
             $Return = $false
         }
         # Return
@@ -214,22 +222,14 @@ Function Set-OZOScheduledTask {
         Run the task on a scheduled day of the week. When this parameter is specified, "TaskWeekday" and "TaskStartTime" are required, and "TaskRandomDelay" and "TaskAtReboot" are optional. Exclusive with "TaskAtLogon".
         .PARAMETER TaskSchedules
         A compressed JSON list of dictionaries representing the schedules for the task. Each dictionary should contain a Weekday, a StartTime in HH:MM AM/PM format, and a RandomDelay in seconds.
-        .PARAMETER TaskWeekday
-        The day of the week to run the task. Allowed values are "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", and "Saturday".
-        .PARAMETER TaskStartTime
-        A string representing the time to run the task in the HH:MM AM/PM format e.g., "12:00 PM".
-        .PARAMETER TaskRandomDelay
-        The number of seconds to randomly delay the task. Allowed range is 0-3600 seconds. Defaults to 0 seconds.
         .PARAMETER TaskAtReboot
         Run the task at system startup.
         .PARAMETER TaskAtLogon
         Run the task at user logon.
         .EXAMPLE
-        Set-OZOScheduledTask -TaskName "Update OZO PowerShell Module" -TaskScript "C:\Windows\Program Files\WindowsPowerShell\Scripts\ozo-update-ozo-powershell-module.ps1" -TaskSchedules '[{"Weekday":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"Weekday":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"Weekday":"Friday","StartTime":"8:00 AM","RandomDelay":0}]'
+        Set-OZOScheduledTask -TaskName "Update OZO PowerShell Module" -TaskScript "C:\Windows\Program Files\WindowsPowerShell\Scripts\ozo-update-ozo-powershell-module.ps1" -TaskSchedules '[{"Weekday":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"Weekday":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"Weekday":"Friday","StartTime":"8:00 AM","RandomDelay":0}]' -TaskAtReboot
         .EXAMPLE
-        Set-OZOScheduledTask -TaskName "Update OZO PowerShell Module" -TaskScript "C:\Windows\Program Files\WindowsPowerShell\Scripts\ozo-update-ozo-powershell-module.ps1" -TaskScheduled -TaskWeekday "Monday" -TaskStartTime "8:00 AM" -TaskAtReboot
-        .EXAMPLE
-        Set-OZOScheduledTask -TaskName "Update OZO PowerShell Module" -TaskScript "C:\Windows\Program Files\WindowsPowerShell\Scripts\ozo-update-ozo-powershell-module.ps1" -TaskAtLogon
+        Set-OZOScheduledTask -TaskName "Update OZO PowerShell Module" -TaskScript "C:\Windows\Program Files\WindowsPowerShell\Scripts\ozo-register-ozo-powershell-repository.ps1" -TaskAtLogon
         .LINK
         https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Set-OZOScheduledTask.md
     #>
@@ -239,16 +239,17 @@ Function Set-OZOScheduledTask {
         [Parameter(Mandatory=$false,HelpMessage="Parameters for the script")][String]$TaskScriptParams = $null,
         [Parameter(Mandatory=$false,HelpMessage="The directory where the task should be run")][String]$TaskDir = $null,
         [Parameter(Mandatory=$false,HelpMessage="Run the task on a scheduled day of the week",ParameterSetName="Scheduled")][Switch]$TaskScheduled,
-        [Parameter(Mandatory=$true,HelpMessage="The day of the week to run the task",ParameterSetName="Scheduled")][ValidateSet("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday")][String]$TaskWeekday = $null,
-        [Parameter(Mandatory=$true,HelpMessage="The time to start the task",ParameterSetName="Scheduled")][String]$TaskStartTime = $null,
-        [Parameter(Mandatory=$false,HelpMessage="The random delay for the task",ParameterSetName="Scheduled")][ValidateRange(0,3600)][Int32]$TaskRandomDelay = 0,
-        [Parameter(Mandatory=$false,HelpMessage="The user to run the task as")][String]$TaskUser = "SYSTEM",
+        [Parameter(Mandatory=$false,HelpMessage="A compressed JSON list of dictionaries representing the schedules for the task",ParameterSetName="Scheduled")][String]$TaskSchedules = $null,
+        #[Parameter(Mandatory=$true,HelpMessage="The day of the week to run the task",ParameterSetName="Scheduled")][ValidateSet("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday")][String]$TaskWeekday = $null,
+        #[Parameter(Mandatory=$true,HelpMessage="The time to start the task",ParameterSetName="Scheduled")][String]$TaskStartTime = $null,
+        #[Parameter(Mandatory=$false,HelpMessage="The random delay for the task",ParameterSetName="Scheduled")][ValidateRange(0,3600)][Int32]$TaskRandomDelay = 0,
+        [Parameter(Mandatory=$false,HelpMessage="The user to run the task as",ParameterSetName="Scheduled")][String]$TaskUser = "SYSTEM",
         [Parameter(Mandatory=$false,HelpMessage="Run the task at reboot",ParameterSetName="Scheduled")][Switch]$TaskAtReboot,
         [Parameter(Mandatory=$false,HelpMessage="Run the task at logon",ParameterSetName="AtLogon")][Switch]$TaskAtLogon
 
     )
     # Create an OZOScheduledTask object
-    [OZOScheduledTask]::new($TaskName,$TaskScript,$TaskScriptParams,$TaskDir,$TaskScheduled.IsPresent,$TaskWeekday,$TaskStartTime,$TaskRandomDelay,$TaskUser,$TaskAtReboot.IsPresent,$TaskAtLogon.IsPresent)
+    [OZOScheduledTask]::new($TaskName,$TaskScript,$TaskScriptParams,$TaskDir,$TaskScheduled.IsPresent,$TaskSchedules,$TaskUser,$TaskAtReboot.IsPresent,$TaskAtLogon.IsPresent)
 }
 
 Function Remove-OZOScheduledTask {
