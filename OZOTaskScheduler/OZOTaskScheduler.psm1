@@ -11,6 +11,7 @@ Class OZOScheduledTask {
     # PROPERTIES: String Lists
     Hidden [System.Collections.Generic.List[String]]$taskWeekdays = @()
     # PROPERTIES: PSCustomObjects
+    Hidden [PSCustomObject]$ozoLogger     = @()
     Hidden [PSCustomObject]$taskSchedules = @()
     # PROPERTIES: Strings
     Hidden [String]$taskName          = $null
@@ -34,6 +35,10 @@ Class OZOScheduledTask {
         $this.taskUser           = $TaskUser
         $this.taskWeekdays       = @("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday")
         $this.taskRandomDelayMax = 3600
+        # Create an OZOLogger object
+        $this.ozoLogger = (New-OZOLogger)
+        # Log a process start message
+        $this.ozoLogger.Write("Starting process.","Information")
         # Determine if the configuration and environment validate
         If (($this.ValidateConfiguration($TaskSchedules) -And $this.ValidateEnvironment()) -eq $true) {
             # Determine if the task exists
@@ -43,21 +48,22 @@ Class OZOScheduledTask {
                     # We removed the task; determine if we added the task
                     If ($this.AddTask() -eq $true) {
                         # We added the task
-                        Write-OZOProvider -Message ("The " + $this.taskName + " scheduled task was created successfully.") -Level "Information"
+                        $this.ozoLogger.Write(("The " + $this.taskName + " scheduled task was created successfully."),"Information")
                     }
                 }
             } Else {
                 # Task does not exist; determine if we added the task
                 If ($this.AddTask() -eq $true) {
                     # We added the task
-                    Write-OZOProvider -Message ("The " + $this.taskName + " scheduled task was created successfully.") -Level "Information"
+                    $this.ozoLogger.Write(("The " + $this.taskName + " scheduled task was created successfully."),"Information")
                 }
-            }
-            
+            }            
         } Else {
             # Configuration or environment does not validate
             Write-OZOProvider -Message "The configuration or environment for the scheduled task does not validate. Please check the configuration and environment and try again." -Level "Error"
         }
+        # Log a process complete message
+        $this.ozoLogger.Write("Process complete.","Information")
     }
     # METHODS: Constructor method - Remove overload
     OZOScheduledTask($TaskName) {
@@ -124,23 +130,23 @@ Class OZOScheduledTask {
         # Control variable
         [Boolean] $Return = $true
         # Determine if the operator is a local administrator
-        If (Test-OZOLocalAdministrator -eq $false) {
+        If ((Test-OZOLocalAdministrator) -eq $false) {
             # Operator is not a local administrator; set return
             $Return = $false
         }
         # Determine if TaskDir is null; if so, set to the directory containing TaskScript
-        If ($null -eq $this.taskDir) {
+        If ([String]::IsNullOrEmpty($this.taskDir) -eq $true) {
             # TaskDir is null; set to the directory containing TaskScript
-            $this.taskDir = Split-Path -Parent $this.taskScript
+            $this.taskDir = (Split-Path -Parent $this.taskScript)
         }
         # Determine if TaskDir exists
-        If ([Boolean](Test-Path -Path $this.taskDir -PathType Container) -eq $false) {
+        If ([Boolean](Test-Path -Path $this.taskDir -PathType Container -ErrorAction SilentlyContinue) -eq $false) {
             # TaskDir does not exist; set return
             Write-OZOProvider -Message ("The specified TaskDir " + $this.taskDir + " does not exist. Please specify a valid directory and try again.") -Level "Error"
             $Return = $false
         }
         # Determine if TaskScript exists
-        If ([Boolean](Test-Path -Path $this.taskScript -PathType Leaf) -eq $false) {
+        If ([Boolean](Test-Path -Path $this.taskScript -PathType Leaf -ErrorAction SilentlyContinue) -eq $false) {
             # TaskScript does not exist; set return
             Write-OZOProvider -Message ("The specified TaskScript " + $this.taskScript + " does not exist. Please specify a valid script and try again.") -Level "Error"
             $Return = $false
@@ -197,7 +203,7 @@ Class OZOScheduledTask {
                 RunOnlyIfNetworkAvailable = $true
                 Compatibility             = $this.taskCompatibility
                 StartWhenAvailable        = $true
-                Disabled                  = $true
+                Disable                   = $true
             }
         } Else {
             # TaskDisabled is not set; set parameters for New-ScheduledTaskSettingsSet without the Disabled parameter
@@ -334,7 +340,7 @@ Function Set-OZOScheduledTask {
 
     )
     # Create an OZOScheduledTask object
-    [OZOScheduledTask]::new($TaskName,$TaskScript,$TaskScriptParams,$TaskDir,$TaskCompatibility,$TaskDisabled.IsPresent,$TaskScheduled.IsPresent,$TaskSchedules,$TaskUser,$TaskAtReboot.IsPresent,$TaskAtLogon.IsPresent)
+    [OZOScheduledTask]::new($TaskName,$TaskScript,$TaskScriptParams,$TaskDir,$TaskCompatibility,$TaskDisabled.IsPresent,$TaskScheduled.IsPresent,$TaskSchedules,$TaskUser,$TaskAtReboot.IsPresent,$TaskAtLogon.IsPresent) | Out-Null
 }
 
 Function Remove-OZOScheduledTask {
@@ -355,7 +361,7 @@ Function Remove-OZOScheduledTask {
         [Parameter(Mandatory=$true,HelpMessage="The name of the task to remove")][String]$TaskName
     )
     # Create an OZOScheduledTask object
-    [OZOScheduledTask]::new($TaskName)
+    [OZOScheduledTask]::new($TaskName) | Out-Null
 }
 
 Export-ModuleMember `
