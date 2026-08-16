@@ -40,9 +40,15 @@ Set-OZOScheduledTask
 |`TaskAtLogon`|Run the task at user logon.|
 
 ## Examples
-`````powershell
+### Example 1
+```powershell
+Set-OZOScheduledTask -TaskName "Update OZO PowerShell Module" -TaskScript "C:\Windows\Program Files\WindowsPowerShell\Scripts\ozo-update-ozo-powershell-module.ps1" -TaskScheduled -TaskWeekday "Monday" -TaskStartTime "8:00 AM" -TaskAtReboot
 
-`````
+```
+### Example 2
+```powershell
+Set-OZOScheduledTask -TaskName "Register OZO PowerShell Repository" -TaskScript "C:\Windows\Program Files\WindowsPowerShell\Scripts\ozo-register-ozo-powershell-repository.ps1" -TaskAtLogon
+```
 
 ## Outputs
 None.

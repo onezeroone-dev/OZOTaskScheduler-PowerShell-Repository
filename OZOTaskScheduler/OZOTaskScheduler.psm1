@@ -80,6 +80,23 @@ Class OZOScheduledTask {
             # Operator is not a local administrator; set return
             $Return = $false
         }
+        # Determine if TaskDir is null; if so, set to the directory containing TaskScript
+        If ($null -eq $this.taskDir) {
+            # TaskDir is null; set to the directory containing TaskScript
+            $this.taskDir = Split-Path -Parent $this.taskScript
+        }
+        # Determine if TaskDir exists
+        If ([Boolean](Test-Path -Path $this.taskDir -PathType Container) -eq $false) {
+            # TaskDir does not exist; set return
+            Write-OZOProvider -Message ("The specified TaskDir " + $this.taskDir + " does not exist. Please specify a valid directory and try again.") -Level "Error"
+            $Return = $false
+        }
+        # Determine if TaskScript exists
+        If ([Boolean](Test-Path -Path $this.taskScript -PathType Leaf) -eq $false) {
+            # TaskScript does not exist; set return
+            Write-OZOProvider -Message ("The specified TaskScript " + $this.taskScript + " does not exist. Please specify a valid script and try again.") -Level "Error"
+            $Return = $false
+        }
         # Return
         Return $Return
     }
@@ -97,24 +114,65 @@ Class OZOScheduledTask {
     }
     # METHODS: AddTask method
     [Void]AddTask() {
-        <#
-        [Microsoft.Management.Infrastructure.CimInstance]$TaskTrigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $TaskWeekday -At $TaskStartTime -RandomDelay $TaskRandomDelay
+        # Ensure the task is removed
+        $this.RemoveTask()
+        # Determine if TaskScheduled is set
+        If ($this.taskScheduled -eq $true) {
+            # TaskScheduled is set; create a weekly trigger
+            [Microsoft.Management.Infrastructure.CimInstance]$TaskTrigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $this.taskWeekday -At $this.taskStartTime -RandomDelay $this.taskRandomDelay
+            # Add the trigger to the list of triggers
+            $this.taskTriggers.Add($TaskTrigger)
+        }
+        # Determine if TaskAtReboot is set
+        If ($this.taskAtReboot -eq $true) {
+            # TaskAtReboot is set; create a boot trigger
+            [Microsoft.Management.Infrastructure.CimInstance]$TaskTrigger = New-ScheduledTaskTrigger -AtStartup
+            # Add the trigger to the list of triggers
+            $this.taskTriggers.Add($TaskTrigger)
+        }
+        # Determine if TaskAtLogon is set
+        If ($this.taskAtLogon -eq $true) {
+            # TaskAtLogon is set; create a logon trigger
+            [Microsoft.Management.Infrastructure.CimInstance]$TaskTrigger = New-ScheduledTaskTrigger -AtLogOn
+            # Add the trigger to the list of triggers
+            $this.taskTriggers.Add($TaskTrigger)
+        }
+        # Define task settings
         [Microsoft.Management.Infrastructure.CimInstance]$TaskSettings = New-ScheduledTaskSettingsSet -RunOnlyIfNetworkAvailable -Compatibility Win8 -StartWhenAvailable
         # Determine if this script is a PowerShell script
-        If ((Get-Item -Path $TaskScript).Extension -eq ".ps1") {
+        If ((Get-Item -Path $this.taskScript).Extension -eq ".ps1") {
             # Script is PowerShell; set executable and argument for PowerShell
-            [Microsoft.Management.Infrastructure.CimInstance]$TaskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ('-ExecutionPolicy RemoteSigned -File "' + $TaskScript + '" ' + $TaskScriptParams) -WorkingDirectory $TaskDir
+            [Microsoft.Management.Infrastructure.CimInstance]$TaskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ('-ExecutionPolicy RemoteSigned -File "' + $this.taskScript + '" ' + $this.taskScriptParams) -WorkingDirectory $this.taskDir
         } Else {
             # Script is not PowerShell; set executable and argument for CMD
-            [Microsoft.Management.Infrastructure.CimInstance]$TaskAction = New-ScheduledTaskAction -Execute "cmd.exe" -Argument ('/Q /C "' + $TaskScript + '" ' + $TaskScriptParams) -WorkingDirectory $TaskDir
+            [Microsoft.Management.Infrastructure.CimInstance]$TaskAction = New-ScheduledTaskAction -Execute "cmd.exe" -Argument ('/Q /C "' + $this.taskScript + '" ' + $this.taskScriptParams) -WorkingDirectory $this.taskDir
         }
         #>
         # Determine if the task exists
         If ($this.TaskExists() -eq $false) {
-            # Task does not exist; try to create
+            # Task does not exist; determine if TaskAtLogon is set
+            If ($this.taskAtLogon -eq $true) {
+                # Set parameters for Register-ScheduledTask without User parameter
+                $taskParameters = @{
+                    TaskName = $this.taskName
+                    Trigger  = $this.taskTriggers
+                    Action   = $TaskAction
+                    Settings = $TaskSettings
+                }
+            } Else {
+                
+                $taskParameters = @{
+                    TaskName = $this.taskName
+                    Trigger  = $this.taskTriggers
+                    User     = $this.taskUser
+                    Action   = $TaskAction
+                    Settings = $TaskSettings
+                }
+            }
+            # Try to create
             Try {
                 # Create the task
-                Register-ScheduledTask -TaskName $this.taskName -Trigger $this.askTriggers -User $this.taskUser -Action $this.taskAction -Settings $this.taskSettings
+                Register-ScheduledTask @taskParameters
                 # Success
             } Catch {
                 # Failure
@@ -165,6 +223,12 @@ Function Set-OZOScheduledTask {
         Run the task at system startup.
         .PARAMETER TaskAtLogon
         Run the task at user logon.
+        .EXAMPLE
+        Set-OZOScheduledTask -TaskName "Update OZO PowerShell Module" -TaskScript "C:\Windows\Program Files\WindowsPowerShell\Scripts\ozo-update-ozo-powershell-module.ps1" -TaskScheduled -TaskWeekday "Monday" -TaskStartTime "8:00 AM" -TaskAtReboot
+        .EXAMPLE
+        Set-OZOScheduledTask -TaskName "Update OZO PowerShell Module" -TaskScript "C:\Windows\Program Files\WindowsPowerShell\Scripts\ozo-update-ozo-powershell-module.ps1" -TaskAtLogon
+        .LINK
+        https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Set-OZOScheduledTask.md
     #>
     [CmdLetBinding()]Param (
         [Parameter(Mandatory=$true,HelpMessage="The name of the scheduled task")][String]$TaskName,
@@ -192,6 +256,10 @@ Function Remove-OZOScheduledTask {
         Disables and removes a scheduled task, if found.
         .PARAMETER TaskName
         The name of the task to remove.
+        .EXAMPLE
+        Remove-OZOScheduledTask -TaskName "Update OZO PowerShell Module"
+        .LINK
+        https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Remove-OZOScheduledTask.md
     #>
     # Parameters
     [CmdLetBinding()]Param (

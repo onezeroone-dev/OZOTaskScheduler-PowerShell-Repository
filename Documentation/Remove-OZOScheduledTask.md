@@ -7,7 +7,7 @@ Disables and removes a scheduled task, if found.
 ## Syntax
 ```
 Remove-OZOScheduledTask
-    -TaskName
+    -TaskName <String>
 ```
 
 ## Parameters
