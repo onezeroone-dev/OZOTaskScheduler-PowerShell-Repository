@@ -34,13 +34,22 @@ Class OZOScheduledTask {
         If (($this.ValidateConfiguration($TaskSchedules) -And $this.ValidateEnvironment()) -eq $true) {
             # Determine if the task exists
             If ($this.TaskExists() -eq $true) {
-                # Task exists; remove and recreate
-                $this.RemoveTask()
-                $this.AddTask()
+                # Task exists; determine if we removed the task
+                If ($this.RemoveTask() -eq $true) {
+                    # We removed the task; determine if we added the task
+                    If ($this.AddTask() -eq $true) {
+                        # We added the task
+                        Write-OZOProvider -Message ("The " + $this.taskName + " scheduled task was created successfully.") -Level "Information"
+                    }
+                }
             } Else {
-                # Task does not exist; create
-                $this.AddTask()
+                # Task does not exist; determine if we added the task
+                If ($this.AddTask() -eq $true) {
+                    # We added the task
+                    Write-OZOProvider -Message ("The " + $this.taskName + " scheduled task was created successfully.") -Level "Information"
+                }
             }
+            
         } Else {
             # Configuration or environment does not validate
             Write-OZOProvider -Message "The configuration or environment for the scheduled task does not validate. Please check the configuration and environment and try again." -Level "Error"
@@ -52,8 +61,11 @@ Class OZOScheduledTask {
         $this.taskName = $TaskName
         # Determine if the operator is a local administrator
         If (Test-OZOLocalAdministrator -eq $true) {
-            # Call RemoveTask to remove the task
-            $this.RemoveTask()
+            # Determine if we removed the task
+            If ($this.RemoveTask() -eq $true) {
+                # We removed the task
+                Write-OZOProvider -Message ("The " + $this.taskName + " scheduled task was removed successfully.") -Level "Information"
+            }
         } Else {
             Write-OZOProvider -Message "Only local administrators can remove scheduled tasks." -Level "Error"
         }
@@ -149,7 +161,9 @@ Class OZOScheduledTask {
         Return $Return
     }
     # METHODS: AddTask method
-    Hidden [Void] AddTask() {
+    Hidden [Boolean] AddTask() {
+        # Control variable
+        [Boolean] $Return = $true
         # Ensure the task is removed
         $this.RemoveTask()
         # Determine if TaskAtLogon is false and TaskSchedule is not null
@@ -214,14 +228,19 @@ Class OZOScheduledTask {
             } Catch {
                 # Failure
                 Write-OZOProvider -Message ("Failed to register the " + $this.taskName + " scheduled task with error " + $_ + ".") -Level "Error"
+                $Return = $false
             }
         } Else {
             # Task exists or no triggers defined
             Write-OZOProvider -Message "The task exists or no triggers were defined." -Level "Error"
         }
+        # Return
+        return $Return
     }
     # METHODS: RemoveTask method
-    Hidden [Void] RemoveTask() {
+    Hidden [Boolean] RemoveTask() {
+        # Control variable
+        [Boolean] $Return = $true
         # Detemrine if the task exists
         If ($this.TaskExists() -eq $true) {
             # Task exists; try to disable and unregister
@@ -232,8 +251,11 @@ Class OZOScheduledTask {
             } Catch {
                 # Failure
                 Write-OZOProvider -Message ("Failed to remove the " + $this.taskName + "scheduled task with error " + $_ + ".") -Level "Error"
+                $Return = $false
             }
         }
+        # Return
+        return $Return
     }
 }
 

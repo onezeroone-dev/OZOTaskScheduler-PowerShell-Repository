@@ -33,6 +33,6 @@ None.
 - ValidateConfiguration():Boolean
 - ValidateEnvironment():Boolean
 - TaskExists():Boolean
-- AddTask():Void
-- RemoveTask():Void
+- AddTask():Boolean
+- RemoveTask():Boolean
 ```
