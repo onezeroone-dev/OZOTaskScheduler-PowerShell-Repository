@@ -2,7 +2,7 @@
 This function is part of the [OZOTaskScheduler PowerShell Module](https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/README.md).
 
 ## Description
-Updates scheduled tasks for running scripts. Uses PowerShell to run `.ps1` scripts and CMD to run everything else. Tasks may be run at logon by the logged in user with the _TaskAtLogon_ parameter, *or* may be scheduled with the _TaskScheduled_ paramter. Scheduled tasks are run by the _SYSTEM_ user; can have multiple schedules; and can optionally run at reboot with the _TaskAtReboot_ parameter.
+Updates scheduled tasks for running scripts. Uses PowerShell to run `.ps1` scripts and CMD to run everything else. Tasks may be run at logon by the logged in user with the _TaskAtLogon_ parameter, *or* may be scheduled to run as the _SYSTEM_ user with the _TaskScheduled_ paramter. Scheduled tasks can have multiple schedules and can optionally run at reboot with the _TaskAtReboot_ parameter.
 
 ## Syntax
 ```
@@ -37,7 +37,7 @@ Set-OZOScheduledTask
 |`TaskAtLogon`|Run the task at user logon. Exclusive with _TaskScheduled_.|
 
 ## TaskSchedules Configuration
-The _TaskSchedules_ parameter is a compressed JSON (string) list representing the schedules for the task. Each dictionary should contain a Weekday, a StartTime in HH:MM AM|PM format, and a RandomDelay in seconds. Example:
+The _TaskSchedules_ parameter is a string containing a compressed JSON list of the schedules for the task. Each dictionary should contain a Weekday, a StartTime in HH:MM AM|PM format, and a RandomDelay in seconds. Example:
 ```json
 [
     {
@@ -57,7 +57,7 @@ The _TaskSchedules_ parameter is a compressed JSON (string) list representing th
     }
 ]
 ```
-You can define your JSON in any text editor and save it as a file e.g., `taskSchedules.json` and convert your file to a compressed JSON string with:
+You can define your JSON in any text editor and save it as a file e.g., [`taskSchedules-example.json`](taskSchedules-example.json) and convert your file to a compressed JSON string with:
 ```powershell
 Get-Content .\taskSchedules-example.json -Raw | ConvertFrom-Json | ConvertTo-Json -Compress
 {"value":[{"WeekDay":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Friday","StartTime":"8:00 AM","RandomDelay":0}],"Count":3}

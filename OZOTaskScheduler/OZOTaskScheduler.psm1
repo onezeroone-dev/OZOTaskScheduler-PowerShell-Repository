@@ -50,8 +50,13 @@ Class OZOScheduledTask {
     OZOScheduledTask($TaskName) {
         # Set properties
         $this.taskName = $TaskName
-        # Call RemoveTask to remove the task
-        $this.RemoveTask()
+        # Determine if the operator is a local administrator
+        If (Test-OZOLocalAdministrator -eq $true) {
+            # Call RemoveTask to remove the task
+            $this.RemoveTask()
+        } Else {
+            Write-OZOProvider -Message "Only local administrators can remove scheduled tasks." -Level "Error"
+        }
     }
     # METHODS: Configuration validation method
     Hidden [Boolean] ValidateConfiguration($TaskSchedules) {
@@ -132,7 +137,7 @@ Class OZOScheduledTask {
         Return $Return
     }
     # METHODS: TaskExists method
-    Hidden [Boolean]TaskExists() {
+    Hidden [Boolean] TaskExists() {
         # Control variable
         [Boolean] $Return = $true
         # Determine if the task exists
@@ -144,7 +149,7 @@ Class OZOScheduledTask {
         Return $Return
     }
     # METHODS: AddTask method
-    Hidden [Void]AddTask() {
+    Hidden [Void] AddTask() {
         # Ensure the task is removed
         $this.RemoveTask()
         # Determine if TaskAtLogon is false and TaskSchedule is not null
@@ -216,17 +221,17 @@ Class OZOScheduledTask {
         }
     }
     # METHODS: RemoveTask method
-    Hidden [Void]RemoveTask($TaskName) {
+    Hidden [Void] RemoveTask() {
         # Detemrine if the task exists
-        If ($this.TaskExists($TaskName) -eq $true) {
+        If ($this.TaskExists() -eq $true) {
             # Task exists; try to disable and unregister
             Try {
-                Disable-ScheduledTask -TaskName $TaskName -ErrorAction Stop
-                Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction Stop
+                Disable-ScheduledTask -TaskName $this.taskName -ErrorAction Stop
+                Unregister-ScheduledTask -TaskName $this.taskName -Confirm:$false -ErrorAction Stop
                 # Success
             } Catch {
                 # Failure
-                Write-OZOProvider -Message ("Failed to remove the " + $TaskName + "scheduled task with error " + $_ + ".") -Level "Error"
+                Write-OZOProvider -Message ("Failed to remove the " + $this.taskName + "scheduled task with error " + $_ + ".") -Level "Error"
             }
         }
     }
@@ -249,7 +254,7 @@ Function Set-OZOScheduledTask {
         .PARAMETER TaskScheduled
         Run the task on a scheduled day of the week. When this parameter is specified, "TaskSchedules" is required and "TaskAtReboot" is optional. Exclusive with "TaskAtLogon".
         .PARAMETER TaskSchedules
-        A compressed JSON list of dictionaries representing the schedules for the task. See https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Set-OZOScheduledTask.md for more information.
+        A string containing a compressed JSON list of the schedules for the task. See https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Set-OZOScheduledTask.md for more information.
         .PARAMETER TaskAtReboot
         Run the task at system startup.
         .PARAMETER TaskAtLogon
