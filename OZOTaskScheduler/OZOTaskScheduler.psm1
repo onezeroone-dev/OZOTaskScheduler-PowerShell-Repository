@@ -160,7 +160,7 @@ Class OZOScheduledTask {
                     Settings = $TaskSettings
                 }
             } Else {
-                
+                # Set parameters for Register-ScheduledTask with User parameter
                 $taskParameters = @{
                     TaskName = $this.taskName
                     Trigger  = $this.taskTriggers
@@ -169,10 +169,9 @@ Class OZOScheduledTask {
                     Settings = $TaskSettings
                 }
             }
-            # Try to create
+            # Try to register the task
             Try {
-                # Create the task
-                Register-ScheduledTask @taskParameters
+                Register-ScheduledTask @taskParameters -ErrorAction Stop
                 # Success
             } Catch {
                 # Failure
