@@ -20,7 +20,7 @@ Creates a new instance for task creation operations.
 - `$TaskDir`: Optional working directory for task execution
 - `$TaskScheduled`: Whether the task should run on a schedule
 - `$TaskSchedules`: JSON string containing schedule definitions
-- `$TaskUser`: User account to run the task as (currently SYSTEM only)
+- `$TaskUser`: User account to run scheduled tasks as (currently SYSTEM only)
 - `$TaskAtReboot`: Whether the task should run at system reboot
 - `$TaskAtLogon`: Whether the task should run at user logon
 
@@ -39,7 +39,7 @@ All properties are hidden and managed internally:
 - `$taskDisabled`: Boolean indicating if task is disabled
 - `$taskRandomDelayMax`: Maximum random delay in seconds (0-3600)
 - `$taskTriggers`: CIM instances representing task triggers
-- `$taskWeekdays`: List of weekdays the task runs
+- `$taskWeekdays`: List of allowed weekdays for tasks
 - `$taskSchedules`: Parsed schedule configuration
 - `$taskName`: Name of the scheduled task
 - `$taskScript`: Path to the script to execute
@@ -74,7 +74,7 @@ All properties are hidden and managed internally:
 1. Public function calls constructor with task parameters
 2. `ValidateConfiguration()` validates task settings
 3. `ValidateEnvironment()` checks system prerequisites
-4. `TaskExists()` determines if operation is create or update
+4. `TaskExists()` determines if the task already exists
 5. `AddTask()` or `RemoveTask()` performs the actual operation
 
 ## See Also

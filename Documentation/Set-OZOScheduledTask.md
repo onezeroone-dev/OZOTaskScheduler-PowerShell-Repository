@@ -4,7 +4,7 @@ This function is part of the [OZOTaskScheduler PowerShell Module](https://github
 ## Description
 Updates scheduled tasks for running scripts. Uses PowerShell to run `.ps1` scripts and CMD to run everything else. Tasks may be run at logon by the logged in user with the _TaskAtLogon_ parameter, *or* may be scheduled to run as the _SYSTEM_ user with the _TaskScheduled_ paramter. Scheduled tasks can have multiple schedules and can optionally run at reboot with the _TaskAtReboot_ parameter.
 
-If the task already exists, it will be disabled and recreated.
+If the task already exists, it will be deleted and recreated.
 
 ## Prerequisites
 This script requires _Administrator_ privileges.
