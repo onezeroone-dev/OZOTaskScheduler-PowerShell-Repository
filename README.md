@@ -26,4 +26,4 @@ Import-Module OZOTaskScheduler
 - [OZOScheduledTask](Documentation/OZOScheduledTask.md)
 
 ## Logging
-When available, messages are written to the [_One Zero One_ event provider](https://github.com/onezeroone-dev/OZOLogger-PowerShell-Module/blob/main/README.md). Otherwise, , events are written to the _Microsoft-Windows-PowerShell_ provider as _Information_ events using event ID 4100.
+When available, messages are written to the [_One Zero One_ event provider](https://github.com/onezeroone-dev/OZOLogger-PowerShell-Module/blob/main/README.md). Otherwise, events are written to the _Microsoft-Windows-PowerShell_ provider as _Information_ events using event ID *4100*.

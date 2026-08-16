@@ -3,6 +3,7 @@ Class OZOScheduledTask {
     Hidden [Boolean]$taskScheduled = $false
     Hidden [Boolean]$taskAtReboot  = $false
     Hidden [Boolean]$taskAtLogon   = $false
+    Hidden [Boolean]$taskDisabled  = $false
     # PROPERTIES: Int32s
     Hidden [Int32]$taskRandomDelayMax = 0
     # PROPERTIES: Microsoft.Management.Infrastructure.CimInstance Lists
@@ -12,18 +13,21 @@ Class OZOScheduledTask {
     # PROPERTIES: PSCustomObjects
     Hidden [PSCustomObject]$taskSchedules = @()
     # PROPERTIES: Strings
-    Hidden [String]$taskName         = $null
-    Hidden [String]$taskScript       = $null
-    Hidden [String]$taskScriptParams = $null
-    Hidden [String]$taskDir          = $null
-    Hidden [String]$taskUser         = $null
+    Hidden [String]$taskName          = $null
+    Hidden [String]$taskScript        = $null
+    Hidden [String]$taskScriptParams  = $null
+    Hidden [String]$taskCompatibility = $null
+    Hidden [String]$taskDir           = $null
+    Hidden [String]$taskUser          = $null
     # METHODS: Constructor method - New and Update overload
-    OZOScheduledTask($TaskName,$TaskScript,$TaskScriptParams,$TaskDir,$TaskScheduled,$TaskSchedules,$TaskUser,$TaskAtReboot,$TaskAtLogon) {
+    OZOScheduledTask($TaskName,$TaskScript,$TaskScriptParams,$TaskDir,$TaskCompatibility,$TaskDisabled,$TaskScheduled,$TaskSchedules,$TaskUser,$TaskAtReboot,$TaskAtLogon) {
         # Set properties
         $this.taskName           = $TaskName
         $this.taskScript         = $TaskScript
         $this.taskScriptParams   = $TaskScriptParams
         $this.taskDir            = $TaskDir
+        $this.taskCompatibility  = $TaskCompatibility
+        $this.taskDisabled       = $TaskDisabled
         $this.taskScheduled      = $TaskScheduled
         $this.taskAtReboot       = $TaskAtReboot
         $this.taskAtLogon        = $TaskAtLogon
@@ -190,16 +194,43 @@ Class OZOScheduledTask {
             # Add the trigger to the list of triggers
             $this.taskTriggers.Add($TaskTrigger)
         }
+        # Determine if TaskDisabled is set
+        If ($this.taskDisabled -eq $true) {
+            # TaskDisabled is set; set parameters for New-ScheduledTaskSettingsSet with the Disabled parameter
+            $taskParameters = @{
+                RunOnlyIfNetworkAvailable = $true
+                Compatibility             = $this.taskCompatibility
+                StartWhenAvailable        = $true
+                Disabled                  = $true
+            }
+        } Else {
+            # TaskDisabled is not set; set parameters for New-ScheduledTaskSettingsSet without the Disabled parameter
+            $taskParameters = @{
+                RunOnlyIfNetworkAvailable = $true
+                Compatibility             = $this.taskCompatibility
+                StartWhenAvailable        = $true
+            }
+        }
         # Define task settings
-        [Microsoft.Management.Infrastructure.CimInstance]$TaskSettings = New-ScheduledTaskSettingsSet -RunOnlyIfNetworkAvailable -Compatibility Win8 -StartWhenAvailable
+        [Microsoft.Management.Infrastructure.CimInstance]$TaskSettings = New-ScheduledTaskSettingsSet @taskParameters
         # Determine if this script is a PowerShell script
         If ((Get-Item -Path $this.taskScript).Extension -eq ".ps1") {
-            # Script is PowerShell; set executable and argument for PowerShell
-            [Microsoft.Management.Infrastructure.CimInstance]$TaskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ('-ExecutionPolicy RemoteSigned -File "' + $this.taskScript + '" ' + $this.taskScriptParams) -WorkingDirectory $this.taskDir
+            # Script is PowerShell; set paramters for New-ScheduledTaskAction with PowerShell executable and arguments
+            $taskParameters = @{
+                Execute = 'powershell.exe'
+                Argument = ('-ExecutionPolicy RemoteSigned -File "' + $this.taskScript + '" ' + $this.taskScriptParams)
+                WorkingDirectory = $this.taskDir
+            }
         } Else {
             # Script is not PowerShell; set executable and argument for CMD
-            [Microsoft.Management.Infrastructure.CimInstance]$TaskAction = New-ScheduledTaskAction -Execute "cmd.exe" -Argument ('/Q /C "' + $this.taskScript + '" ' + $this.taskScriptParams) -WorkingDirectory $this.taskDir
+            $taskParameters = @{
+                Execute = "cmd.exe"
+                Argument = ('/Q /C "' + $this.taskScript + '" ' + $this.taskScriptParams)
+                WorkingDirectory = $this.taskDir
+            }
         }
+        # Define the task action
+        [Microsoft.Management.Infrastructure.CimInstance]$TaskAction = New-ScheduledTaskAction @taskParameters
         # Determine if TaskAtLogon is set
         If ($this.taskAtLogon -eq $true) {
             # TaskAtLogon is set; set parameters for Register-ScheduledTask without User parameter
@@ -227,7 +258,7 @@ Class OZOScheduledTask {
                 # Success
             } Catch {
                 # Failure
-                Write-OZOProvider -Message ("Failed to register the " + $this.taskName + " scheduled task with error " + $_ + ".") -Level "Error"
+                Write-OZOProvider -Message ("Failed to register the " + $this.taskName + " task with error " + $_ + ".") -Level "Error"
                 $Return = $false
             }
         } Else {
@@ -271,8 +302,12 @@ Function Set-OZOScheduledTask {
         The absolute path to the script to run.
         .PARAMETER TaskScriptParams
         Parameters for the script.
+        .PARAMETER TaskCompatibility
+        Compatibility mode for the task. Allowed values are "At", "V1", "Vista", "Win7", and "Win8". Defaults to "Win8".
         .PARAMETER TaskDir
         The directory where the task should be run. Defaults to the directory containing "TaskScript".
+        .PARAMETER TaskDisabled
+        Whether the task is disabled on creation.
         .PARAMETER TaskScheduled
         Run the task on a scheduled day of the week. When this parameter is specified, "TaskSchedules" is required and "TaskAtReboot" is optional. Exclusive with "TaskAtLogon".
         .PARAMETER TaskSchedules
@@ -293,6 +328,8 @@ Function Set-OZOScheduledTask {
         [Parameter(Mandatory=$true,HelpMessage="The absolute path to the script to run")][String]$TaskScript,
         [Parameter(Mandatory=$false,HelpMessage="Parameters for the script")][String]$TaskScriptParams = $null,
         [Parameter(Mandatory=$false,HelpMessage="The directory where the task should be run")][String]$TaskDir = $null,
+        [Parameter(Mandatory=$false,HelpMessage="Compatibility mode for the task")][ValidateSet("At","V1","Vista","Win7","Win8")][String]$TaskCompatibility = $null,
+        [Parameter(Mandatory=$false,HelpMessage="Whether the task is disabled on creation")][Switch]$TaskDisabled,
         [Parameter(Mandatory=$false,HelpMessage="Run the task on a scheduled day of the week",ParameterSetName="Scheduled")][Switch]$TaskScheduled,
         [Parameter(Mandatory=$false,HelpMessage="A compressed JSON list of dictionaries representing the schedules for the task",ParameterSetName="Scheduled")][String]$TaskSchedules = $null,
         [Parameter(Mandatory=$false,HelpMessage="The user to run the task as",ParameterSetName="Scheduled")][String]$TaskUser = "SYSTEM",
@@ -301,7 +338,7 @@ Function Set-OZOScheduledTask {
 
     )
     # Create an OZOScheduledTask object
-    [OZOScheduledTask]::new($TaskName,$TaskScript,$TaskScriptParams,$TaskDir,$TaskScheduled.IsPresent,$TaskSchedules,$TaskUser,$TaskAtReboot.IsPresent,$TaskAtLogon.IsPresent)
+    [OZOScheduledTask]::new($TaskName,$TaskScript,$TaskScriptParams,$TaskDir,$TaskCompatibility,$TaskDisabled.IsPresent,$TaskScheduled.IsPresent,$TaskSchedules,$TaskUser,$TaskAtReboot.IsPresent,$TaskAtLogon.IsPresent)
 }
 
 Function Remove-OZOScheduledTask {

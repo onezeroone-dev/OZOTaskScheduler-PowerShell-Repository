@@ -29,7 +29,9 @@ Set-OZOScheduledTask
 |`TaskName`|The name of the scheduled task.|
 |`TaskScript`|The absolute path to the script to run.|
 |`TaskScriptParams`|Parameters for the script.|
-|`TaskPath`|The directory where the script should be run. Defaults to the directory containing _TaskScript_.|
+|`TaskDir`|The directory where the script should be run. Defaults to the directory containing _TaskScript_.|
+|`TaskCompatibility`|Compatibility mode for the task. Allowed values are At, V1, Vista, Win7, and Win8. Defaults to _Win8_.|
+|`TaskDisabled`|Whether the task is disabled on creation.|
 |`TaskScheduled`|Run the task on a scheduled day of the week. When this parameter is specified, _TaskSchedules_ is required and _TaskAtReboot_ is optional. Exclusive with _TaskAtLogon_.|
 |`TaskSchedules`|See _TaskSchedules Configuration_, below.|
 |`TaskRandomDelay`|The number of seconds to randomly delay the task. Allowed range is 0-3600 seconds. Defaults to 0 seconds.|
