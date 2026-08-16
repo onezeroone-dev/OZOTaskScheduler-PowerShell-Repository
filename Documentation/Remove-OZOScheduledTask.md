@@ -4,6 +4,9 @@ This function is part of the [OZOTaskScheduler PowerShell Module](https://github
 ## Description
 Disables and removes a scheduled task, if found.
 
+## Prerequisites
+This script requires _Administrator_ privileges.
+
 ## Syntax
 ```
 Remove-OZOScheduledTask
@@ -17,7 +20,7 @@ Remove-OZOScheduledTask
 
 ## Examples
 `````powershell
-Remove-OZOTaskName -TaskName "Update OZO PowerShell Module"
+Remove-OZOScheduledTask -TaskName "Update OZO PowerShell Module"
 `````
 
 ## Outputs
