@@ -4,9 +4,11 @@ Class OZOScheduledTask {
     Hidden [Boolean]$taskAtReboot  = $false
     Hidden [Boolean]$taskAtLogon   = $false
     # PROPERTIES: Int32s
-    Hidden [Int32]$taskRandomDelay = 0
-    # PROPERTIES: Lists
+    Hidden [Int32]$taskRandomDelayMax = 0
+    # PROPERTIES: Microsoft.Management.Infrastructure.CimInstance Lists
     Hidden [System.Collections.Generic.List[Microsoft.Management.Infrastructure.CimInstance]]$taskTriggers = @()
+    # PROPERTIES: String Lists
+    Hidden [System.Collections.Generic.List[String]]$taskWeekdays = @()
     # PROPERTIES: PSCustomObjects
     Hidden [PSCustomObject]$taskSchedules = @()
     # PROPERTIES: Strings
@@ -14,20 +16,20 @@ Class OZOScheduledTask {
     Hidden [String]$taskScript       = $null
     Hidden [String]$taskScriptParams = $null
     Hidden [String]$taskDir          = $null
-    Hidden [String]$taskWeekday      = $null
-    Hidden [String]$taskStartTime    = $null
     Hidden [String]$taskUser         = $null
     # METHODS: Constructor method - New and Update overload
     OZOScheduledTask($TaskName,$TaskScript,$TaskScriptParams,$TaskDir,$TaskScheduled,$TaskSchedules,$TaskUser,$TaskAtReboot,$TaskAtLogon) {
         # Set properties
-        $this.taskName         = $TaskName
-        $this.taskScript       = $TaskScript
-        $this.taskScriptParams = $TaskScriptParams
-        $this.taskDir          = $TaskDir
-        $this.taskScheduled    = $TaskScheduled
-        $this.taskAtReboot     = $TaskAtReboot
-        $this.taskAtLogon      = $TaskAtLogon
-        $this.taskUser         = $TaskUser
+        $this.taskName           = $TaskName
+        $this.taskScript         = $TaskScript
+        $this.taskScriptParams   = $TaskScriptParams
+        $this.taskDir            = $TaskDir
+        $this.taskScheduled      = $TaskScheduled
+        $this.taskAtReboot       = $TaskAtReboot
+        $this.taskAtLogon        = $TaskAtLogon
+        $this.taskUser           = $TaskUser
+        $this.taskWeekdays       = @("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday")
+        $this.taskRandomDelayMax = 3600
         # Determine if the configuration and environment validate
         If (($this.ValidateConfiguration($TaskSchedules) -And $this.ValidateEnvironment()) -eq $true) {
             # Determine if the task exists
@@ -70,7 +72,28 @@ Class OZOScheduledTask {
         # Determine if TaskSchedules can be converted from JSON
         If ($null -ne $TaskSchedules -And [Boolean]($TaskSchedules | ConvertFrom-Json -ErrorAction SilentlyContinue) -eq $true) {
             # TaskSchedules can be converted from JSON
-            $this.taskSchedules = $TaskSchedules | ConvertFrom-Json
+            $this.taskSchedules = $TaskSchedules | ConvertFrom-Json | Select-Object -Unique
+            # Determine if each schedule has a valid Weekday, StartTime, and RandomDelay
+            ForEach ($taskSchedule in $this.taskSchedules) {
+                # Determine if Weekday is valid
+                If ($this.taskWeekdays -NotContains $taskSchedule.Weekday) {
+                    # Weekday is not valid
+                    Write-OZOProvider -Message ("The Weekday parameter for the scheduled task must be one of the following: " + ($this.taskWeekdays -join ", ") + ". Please specify a valid weekday and try again.") -Level "Error"
+                    $Return = $false
+                }
+                # Determine if StartTime can be converted to a DateTime
+                If ([Boolean]($taskSchedule.StartTime -As [DateTime]) -eq $false) {
+                    # StartTime cannot be converted to a DateTime
+                    Write-OZOProvider -Message ("The StartTime parameter for the scheduled task must be a valid time in the HH:MM AM/PM format. Please specify a valid time and try again.") -Level "Error"
+                    $Return = $false
+                }
+                # Determine if RandomDelay is within the valid range
+                If ($taskSchedule.RandomDelay -lt 0 -Or $taskSchedule.RandomDelay -gt $this.taskRandomDelayMax) {
+                    # RandomDelay is not within the valid range
+                    Write-OZOProvider -Message ("The RandomDelay parameter for the scheduled task must be between 0 and " + $this.taskRandomDelayMax + " seconds. Please specify a valid random delay and try again.") -Level "Error"
+                    $Return = $false
+                }
+            }
         } Else {
             # TaskSchedules cannot be converted from JSON
             Write-OZOProvider -Message "The TaskSchedules parameter must be a valid JSON string. Please specify a valid JSON string and try again." -Level "Error"
@@ -124,22 +147,25 @@ Class OZOScheduledTask {
     Hidden [Void]AddTask() {
         # Ensure the task is removed
         $this.RemoveTask()
-        # Determine if TaskScheduled is set
-        If ($this.taskScheduled -eq $true) {
-            # TaskScheduled is set; create a weekly trigger
-            [Microsoft.Management.Infrastructure.CimInstance]$TaskTrigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $this.taskWeekday -At $this.taskStartTime -RandomDelay $this.taskRandomDelay
-            # Add the trigger to the list of triggers
-            $this.taskTriggers.Add($TaskTrigger)
+        # Determine if TaskAtLogon is false and TaskSchedule is not null
+        If ($this.taskAtLogon -eq $false -And $null -ne $this.taskSchedules) {
+            # TaskSchedule is not null; iterate over the task schedules and create triggers
+            ForEach ($taskSchedule in $this.taskSchedules) {
+                # Create a weekly trigger for each schedule
+                [Microsoft.Management.Infrastructure.CimInstance]$TaskTrigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $taskSchedule.Weekday -At $taskSchedule.StartTime -RandomDelay $taskSchedule.RandomDelay
+                # Add the trigger to the list of triggers
+                $this.taskTriggers.Add($TaskTrigger)
+            }
         }
-        # Determine if TaskAtReboot is set
-        If ($this.taskAtReboot -eq $true) {
+        # Determine if TaskAtLogon is false and TaskAtReboot is set
+        If ($this.taskAtLogon -eq $false -And $this.taskAtReboot -eq $true) {
             # TaskAtReboot is set; create a boot trigger
             [Microsoft.Management.Infrastructure.CimInstance]$TaskTrigger = New-ScheduledTaskTrigger -AtStartup
             # Add the trigger to the list of triggers
             $this.taskTriggers.Add($TaskTrigger)
         }
-        # Determine if TaskAtLogon is set
-        If ($this.taskAtLogon -eq $true) {
+        # Determine if TaskAtLogon is set and TaskScheduled and TaskAtReboot are false
+        If ($this.taskAtLogon -eq $true -And $this.taskScheduled -eq $false -And $this.taskAtReboot -eq $false) {
             # TaskAtLogon is set; create a logon trigger
             [Microsoft.Management.Infrastructure.CimInstance]$TaskTrigger = New-ScheduledTaskTrigger -AtLogOn
             # Add the trigger to the list of triggers
@@ -155,36 +181,38 @@ Class OZOScheduledTask {
             # Script is not PowerShell; set executable and argument for CMD
             [Microsoft.Management.Infrastructure.CimInstance]$TaskAction = New-ScheduledTaskAction -Execute "cmd.exe" -Argument ('/Q /C "' + $this.taskScript + '" ' + $this.taskScriptParams) -WorkingDirectory $this.taskDir
         }
-        #>
-        # Determine if the task exists
-        If ($this.TaskExists() -eq $false) {
-            # Task does not exist; determine if TaskAtLogon is set
-            If ($this.taskAtLogon -eq $true) {
-                # Set parameters for Register-ScheduledTask without User parameter
-                $taskParameters = @{
-                    TaskName = $this.taskName
-                    Trigger  = $this.taskTriggers
-                    Action   = $TaskAction
-                    Settings = $TaskSettings
-                }
-            } Else {
-                # Set parameters for Register-ScheduledTask with User parameter
-                $taskParameters = @{
-                    TaskName = $this.taskName
-                    Trigger  = $this.taskTriggers
-                    User     = $this.taskUser
-                    Action   = $TaskAction
-                    Settings = $TaskSettings
-                }
+        # Determine if TaskAtLogon is set
+        If ($this.taskAtLogon -eq $true) {
+            # TaskAtLogon is set; set parameters for Register-ScheduledTask without User parameter
+            $taskParameters = @{
+                TaskName = $this.taskName
+                Trigger  = $this.taskTriggers
+                Action   = $TaskAction
+                Settings = $TaskSettings
             }
-            # Try to register the task
+        } Else {
+            # TaskAtLogon is not set; set parameters for Register-ScheduledTask with User parameter
+            $taskParameters = @{
+                TaskName = $this.taskName
+                Trigger  = $this.taskTriggers
+                User     = $this.taskUser
+                Action   = $TaskAction
+                Settings = $TaskSettings
+            }
+        }
+        # Determine that the task does not exist and at least one trigger is defined
+        If ($this.TaskExists() -eq $false -And $this.taskTriggers.Count -gt 0) {
+            # The task does not exist and at least one trigger is defined; try to register the task
             Try {
                 Register-ScheduledTask @taskParameters -ErrorAction Stop
                 # Success
             } Catch {
                 # Failure
-                Write-OZOProvider -Message ("Failed to add the " + $this.taskName + " scheduled task with error " + $_ + ".") -Level "Error"
+                Write-OZOProvider -Message ("Failed to register the " + $this.taskName + " scheduled task with error " + $_ + ".") -Level "Error"
             }
+        } Else {
+            # Task exists or no triggers defined
+            Write-OZOProvider -Message "The task exists or no triggers were defined." -Level "Error"
         }
     }
     # METHODS: RemoveTask method
@@ -240,9 +268,6 @@ Function Set-OZOScheduledTask {
         [Parameter(Mandatory=$false,HelpMessage="The directory where the task should be run")][String]$TaskDir = $null,
         [Parameter(Mandatory=$false,HelpMessage="Run the task on a scheduled day of the week",ParameterSetName="Scheduled")][Switch]$TaskScheduled,
         [Parameter(Mandatory=$false,HelpMessage="A compressed JSON list of dictionaries representing the schedules for the task",ParameterSetName="Scheduled")][String]$TaskSchedules = $null,
-        #[Parameter(Mandatory=$true,HelpMessage="The day of the week to run the task",ParameterSetName="Scheduled")][ValidateSet("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday")][String]$TaskWeekday = $null,
-        #[Parameter(Mandatory=$true,HelpMessage="The time to start the task",ParameterSetName="Scheduled")][String]$TaskStartTime = $null,
-        #[Parameter(Mandatory=$false,HelpMessage="The random delay for the task",ParameterSetName="Scheduled")][ValidateRange(0,3600)][Int32]$TaskRandomDelay = 0,
         [Parameter(Mandatory=$false,HelpMessage="The user to run the task as",ParameterSetName="Scheduled")][String]$TaskUser = "SYSTEM",
         [Parameter(Mandatory=$false,HelpMessage="Run the task at reboot",ParameterSetName="Scheduled")][Switch]$TaskAtReboot,
         [Parameter(Mandatory=$false,HelpMessage="Run the task at logon",ParameterSetName="AtLogon")][Switch]$TaskAtLogon
