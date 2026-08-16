@@ -1,7 +1,7 @@
 # OZOTaskScheduler PowerShell Module Installation and Usage
 
 ## Description
-Provides functions for managing Windows Task Scheduler tasks. Tasks may be run at logon by the logged in user, or may be scheduled. Scheduled tasks are run by the _SYSTEM_ user; can only have one schedule; and can optionally contain a trigger to run at reboot.
+Provides functions for managing Windows Task Scheduler tasks.
 
 ## Installation
 This module is published to Microsoft's [PowerShell Gallery](https://learn.microsoft.com/en-us/powershell/scripting/gallery/overview?view=powershell-5.1). Ensure your system is configured for this repository then execute the following in an _Administrator_ PowerShell:

@@ -247,13 +247,13 @@ Function Set-OZOScheduledTask {
         .PARAMETER TaskDir
         The directory where the task should be run. Defaults to the directory containing "TaskScript".
         .PARAMETER TaskScheduled
-        Run the task on a scheduled day of the week. When this parameter is specified, "TaskWeekday" and "TaskStartTime" are required, and "TaskRandomDelay" and "TaskAtReboot" are optional. Exclusive with "TaskAtLogon".
+        Run the task on a scheduled day of the week. When this parameter is specified, "TaskSchedules" is required and "TaskAtReboot" is optional. Exclusive with "TaskAtLogon".
         .PARAMETER TaskSchedules
-        A compressed JSON list of dictionaries representing the schedules for the task. Each dictionary should contain a Weekday, a StartTime in HH:MM AM/PM format, and a RandomDelay in seconds.
+        A compressed JSON list of dictionaries representing the schedules for the task. See https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Set-OZOScheduledTask.md for more information.
         .PARAMETER TaskAtReboot
         Run the task at system startup.
         .PARAMETER TaskAtLogon
-        Run the task at user logon.
+        Run the task at user logon. Exclustive with "TaskScheduled".
         .EXAMPLE
         Set-OZOScheduledTask -TaskName "Update OZO PowerShell Module" -TaskScript "C:\Windows\Program Files\WindowsPowerShell\Scripts\ozo-update-ozo-powershell-module.ps1" -TaskSchedules '[{"Weekday":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"Weekday":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"Weekday":"Friday","StartTime":"8:00 AM","RandomDelay":0}]' -TaskAtReboot
         .EXAMPLE

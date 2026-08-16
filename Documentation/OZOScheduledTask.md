@@ -13,22 +13,22 @@ None.
 ## Definition
 ### Associations
 ```
-- $taskScheduled:Boolean = $false
-- $taskAtReboot:Boolean  = $true
-- $taskAtLogon:Boolean   = $true
+- $taskScheduled:Boolean   = $false
+- $taskAtReboot:Boolean    = $true
+- $taskAtLogon:Boolean     = $true
+- $taskRandomDelayMask     = 0
 - $taskTriggers:System.Collections.Generic.List[Microsoft.Management.Infrastructure.CimInstance] = @()
-- $taskName:String       = $null
-- $taskScript            = $null
-- $taskScriptParams      = $null
-- $taskDir               = $null
-- $taskWeekday           = $null
-- $taskStartTime         = $null
-- $taskUser              = $null
-- $taskRandomDelay       = 0
+- $taskWeekdays:System.Collections.Generic.List[String] = @()
+- $taskSchedules:PSCustomObject = @()
+- $taskName:String         = $null
+- $taskScript:String       = $null
+- $taskScriptParams:String = $null
+- $taskDir:String          = $null
+- $taskUser:String         = $null
 ```
 ### Operations
 ```
-+ OZOScheduledTask($TaskName:String,$TaskScript:String,$TaskScriptParams:String,$TaskDir:String,$TaskScheduled:Boolean,$TaskWeekday:String,$TaskStartTime:String,$TaskRandomDelay:Int32,$TaskUser:String,$TaskAtReboot:Boolean,$TaskAtLogon:Boolean):Void
++ OZOScheduledTask($TaskName:String,$TaskScript:String,$TaskScriptParams:String,$TaskDir:String,$TaskScheduled:Boolean,$TaskSchedules:String,$TaskUser:String,$TaskAtReboot:Boolean,$TaskAtLogon:Boolean):Void
 + OZOScheduledTask($TaskName:String):Void
 - ValidateConfiguration():Boolean
 - ValidateEnvironment():Boolean
