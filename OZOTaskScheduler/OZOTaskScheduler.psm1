@@ -329,4 +329,4 @@ Export-ModuleMember `
     Set-OZOScheduledTask,
     Remove-OZOScheduledTask
 
-Set-Alias -Name New-OZOScheduledTask -Value Set-OZOScheduledTask -Option Global
+Set-Alias -Name New-OZOScheduledTask -Value Set-OZOScheduledTask -Scope Global
