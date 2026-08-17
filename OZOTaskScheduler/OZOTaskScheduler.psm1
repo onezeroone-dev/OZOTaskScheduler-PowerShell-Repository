@@ -69,16 +69,22 @@ Class OZOScheduledTask {
     OZOScheduledTask($TaskName) {
         # Set properties
         $this.taskName = $TaskName
+        # Create an OZOLogger object
+        $this.ozoLogger = (New-OZOLogger)
+        # Log a process start message
+        $this.ozoLogger.Write("Starting process.","Information")
         # Determine if the operator is a local administrator
         If (Test-OZOLocalAdministrator -eq $true) {
             # Determine if we removed the task
             If ($this.RemoveTask() -eq $true) {
                 # We removed the task
-                Write-OZOProvider -Message ("The " + $this.taskName + " scheduled task was removed successfully.") -Level "Information"
+                $this.ozoLogger.Write(("The " + $this.taskName + " scheduled task was removed successfully."),"Information")
             }
         } Else {
-            Write-OZOProvider -Message "Only local administrators can remove scheduled tasks." -Level "Error"
+            $this.ozoLogger.Write("Only local administrators can remove scheduled tasks.","Error")
         }
+        # Log a process complete message
+        $this.ozoLogger.Write("Process complete.","Information")
     }
     # METHODS: Configuration validation method
     Hidden [Boolean] ValidateConfiguration($TaskSchedules) {
@@ -220,7 +226,7 @@ Class OZOScheduledTask {
             # Script is PowerShell; set paramters for New-ScheduledTaskAction with PowerShell executable and arguments
             $taskParameters = @{
                 Execute = 'powershell.exe'
-                Argument = ('-ExecutionPolicy RemoteSigned -File "' + $this.taskScript + '" ' + $this.taskScriptParams)
+                Argument = ('-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy RemoteSigned  -File "' + $this.taskScript + '" ' + $this.taskScriptParams)
                 WorkingDirectory = $this.taskDir
             }
         } Else {
