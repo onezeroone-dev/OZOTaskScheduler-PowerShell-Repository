@@ -1,132 +1,371 @@
-Class OZOScheduledTask {
+#Requires -RunAsAdministrator
+
+# CLASSES
+# OZOSchedule class
+Class OZOSchedule {
     # PROPERTIES: Booleans
-    Hidden [Boolean]$taskScheduled = $false
-    Hidden [Boolean]$taskAtReboot  = $false
-    Hidden [Boolean]$taskAtLogon   = $false
-    Hidden [Boolean]$taskDisabled  = $false
+    [Boolean] $Valid = $false
     # PROPERTIES: Int32s
-    Hidden [Int32]$taskRandomDelayMax = 0
-    # PROPERTIES: Microsoft.Management.Infrastructure.CimInstance Lists
-    Hidden [System.Collections.Generic.List[Microsoft.Management.Infrastructure.CimInstance]]$taskTriggers = @()
-    # PROPERTIES: String Lists
-    Hidden [System.Collections.Generic.List[String]]$taskWeekdays = @()
-    # PROPERTIES: PSCustomObjects
-    Hidden [PSCustomObject]$ozoLogger     = @()
-    Hidden [PSCustomObject]$taskSchedules = @()
+    [Int32] $RandomDelay    = 0
+    [Int32] $RandomDelayMax = 3600
     # PROPERTIES: Strings
-    Hidden [String]$taskName          = $null
-    Hidden [String]$taskScript        = $null
-    Hidden [String]$taskScriptParams  = $null
-    Hidden [String]$taskCompatibility = $null
-    Hidden [String]$taskDir           = $null
-    Hidden [String]$taskUser          = $null
-    # METHODS: Constructor method - New and Update overload
-    OZOScheduledTask($TaskName,$TaskScript,$TaskScriptParams,$TaskDir,$TaskCompatibility,$TaskDisabled,$TaskScheduled,$TaskSchedules,$TaskUser,$TaskAtReboot,$TaskAtLogon) {
+    [String] $StartTime = $null
+    [String] $WeekDay   = $null
+    # PROPERTIES: String Lists
+    [System.Collections.Generic.List[String]] $Weekdays = @("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday")
+    # METHODS: Constructor method
+    OZOSchedule($Schedule) {
         # Set properties
-        $this.taskName           = $TaskName
-        $this.taskScript         = $TaskScript
-        $this.taskScriptParams   = $TaskScriptParams
-        $this.taskDir            = $TaskDir
-        $this.taskCompatibility  = $TaskCompatibility
-        $this.taskDisabled       = $TaskDisabled
-        $this.taskScheduled      = $TaskScheduled
-        $this.taskAtReboot       = $TaskAtReboot
-        $this.taskAtLogon        = $TaskAtLogon
-        $this.taskUser           = $TaskUser
-        $this.taskWeekdays       = @("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday")
-        $this.taskRandomDelayMax = 3600
-        # Create an OZOLogger object
-        $this.ozoLogger = (New-OZOLogger)
-        # Log a process start message
-        $this.ozoLogger.Write("Starting process.","Information")
-        # Determine if the configuration and environment validate
-        If (($this.ValidateConfiguration($TaskSchedules) -And $this.ValidateEnvironment()) -eq $true) {
-            # Determine if the task exists
-            If ($this.TaskExists() -eq $true) {
-                # Task exists; determine if we removed the task
-                If ($this.RemoveTask() -eq $true) {
-                    # We removed the task; determine if we added the task
-                    If ($this.AddTask() -eq $true) {
-                        # We added the task
-                        $this.ozoLogger.Write(("The " + $this.taskName + " scheduled task was created successfully."),"Information")
-                    }
-                }
-            } Else {
-                # Task does not exist; determine if we added the task
-                If ($this.AddTask() -eq $true) {
-                    # We added the task
-                    $this.ozoLogger.Write(("The " + $this.taskName + " scheduled task was created successfully."),"Information")
-                }
-            }            
-        } Else {
-            # Configuration or environment does not validate
-            Write-OZOProvider -Message "The configuration or environment for the scheduled task does not validate. Please check the configuration and environment and try again." -Level "Error"
-        }
-        # Log a process complete message
-        $this.ozoLogger.Write("Process complete.","Information")
+        $this.RandomDelay = $Schedule.RandomDelay
+        $this.WeekDay     = $Schedule.WeekDay
+        $this.StartTime   = $Schedule.StartTime
+        # Call validates to set valid
+        $this.Valid = $this.Validates()
     }
-    # METHODS: Constructor method - Remove overload
-    OZOScheduledTask($TaskName) {
-        # Set properties
-        $this.taskName = $TaskName
-        # Create an OZOLogger object
-        $this.ozoLogger = (New-OZOLogger)
-        # Log a process start message
-        $this.ozoLogger.Write("Starting process.","Information")
-        # Determine if the operator is a local administrator
-        If (Test-OZOLocalAdministrator -eq $true) {
-            # Determine if we removed the task
-            If ($this.RemoveTask() -eq $true) {
-                # We removed the task
-                $this.ozoLogger.Write(("The " + $this.taskName + " scheduled task was removed successfully."),"Information")
-            }
-        } Else {
-            $this.ozoLogger.Write("Only local administrators can remove scheduled tasks.","Error")
-        }
-        # Log a process complete message
-        $this.ozoLogger.Write("Process complete.","Information")
-    }
-    # METHODS: Configuration validation method
-    Hidden [Boolean] ValidateConfiguration($TaskSchedules) {
+    # METHODS: Validates method
+    [Boolean] Validates() {
         # Control variable
         [Boolean] $Return = $true
-        # Determine if at least one trigger has been defined
-        If ($this.taskScheduled -eq $false -And $this.taskAtReboot -eq $false -And $this.taskAtLogon -eq $false) {
-            # No triggers defined
-            Write-OZOProvider -Message "At least one trigger must be defined for the scheduled task. Please specify a trigger and try again." -Level "Error"
+        # Determine if RandomDelay is outside of range
+        If ($this.RandomDelay -lt 0 -Or $this.RandomDelay -gt $this.RandomDelayMax) {
+            # RandomDelay is outside of range
             $Return = $false
         }
-        # Determine if TaskSchedules is null
-        If ($null -ne $TaskSchedules) {
-            # Try to convert TaskSchedules from JSON and validate each schedule
-            Try {
-                $this.taskSchedules = $TaskSchedules | ConvertFrom-Json -ErrorAction Stop | Select-Object -Unique
-                # TaskSchedules can be converted from JSON; determine if each schedule has a valid Weekday, StartTime, and RandomDelay
-                ForEach ($taskSchedule in $this.taskSchedules) {
-                    # Determine if Weekday is valid
-                    If ($this.taskWeekdays -NotContains $taskSchedule.Weekday) {
-                        # Weekday is not valid
-                        Write-OZOProvider -Message ("The Weekday parameter for the scheduled task must be one of the following: " + ($this.taskWeekdays -join ", ") + ". Please specify a valid weekday and try again.") -Level "Error"
-                        $Return = $false
-                    }
-                    # Determine if StartTime can be converted to a DateTime
-                    If ([Boolean]($taskSchedule.StartTime -As [DateTime]) -eq $false) {
-                        # StartTime cannot be converted to a DateTime
-                        Write-OZOProvider -Message ("The StartTime parameter for the scheduled task must be a valid time in the HH:MM AM/PM format. Please specify a valid time and try again.") -Level "Error"
-                        $Return = $false
-                    }
-                    # Determine if RandomDelay is within the valid range
-                    If ($taskSchedule.RandomDelay -lt 0 -Or $taskSchedule.RandomDelay -gt $this.taskRandomDelayMax) {
-                        # RandomDelay is not within the valid range
-                        Write-OZOProvider -Message ("The RandomDelay parameter for the scheduled task must be between 0 and " + $this.taskRandomDelayMax + " seconds. Please specify a valid random delay and try again.") -Level "Error"
-                        $Return = $false
-                    }
-                }
-            } Catch {
-                # TaskSchedules cannot be converted from JSON
-                Write-OZOProvider -Message "The TaskSchedules parameter must be a valid JSON string. Please specify a valid JSON string and try again." -Level "Error"
+        # Determine if StartTime cannot be expressed as a DateTime
+        If ([Boolean]($this.StartTime -As [DateTime]) -eq $false) {
+            # StartTime cannot be expressed as a DateTime
+            $Return = $false
+        }
+        # Determine if WeekDay is not found in WeekDays
+        If ($this.WeekDays -NotContains $this.WeekDay) {
+            # WeekDay is not found in WeekDays
+            $Return = $false
+        }
+        # Return
+        return $Return
+    }
+}
+# OZOTask class
+Class OZOTask {
+    # PROPERTIES: Booleans
+    [Boolean] $Disabled  = $false
+    [Boolean] $Scheduled = $false
+    [Boolean] $AtReboot  = $false
+    [Boolean] $AtLogon   = $false
+    # PROPERTIES: PSCustomObjects
+    [PSCustomObject] $ozoLogger = $null
+    # PROPERTIES: PSCustomObject Lists
+    [System.Collections.Generic.List[PSCustomObject]] $Schedules = @()
+    # PROPERTIES: Strings
+    [String] $Name          = $null
+    [String] $Script        = $null
+    [String] $Parameters    = $null
+    [String] $Compatibility = $null
+    [String] $Directory     = $null
+    [String] $User          = $null
+    # PROPERTIES: String Lists
+    [System.Collections.Generic.List[String]] $Compatibilities = @("At","V1","Vista","Win7","Win8")
+    # METHODS: Constructor method - Disable, Enable, Export, Get, 
+    OZOTask([String]$Name) {
+        # Set Properties
+        $this.Name = $Name
+        # Create a logger object
+        $this.ozoLogger = (New-OZOLogger)
+        # Determine if task exists
+        If ($this.Exists() -eq $true) {
+            # Task exists; populate from existing task
+            $this.PopulateFromExistingTask()
+        }
+    }
+    # METHODS: Constructor method - full
+    OZOTask([String]$Name,[String]$Script,[String]$Parameters,[String]$Compatibility,[String]$Directory,[String]$User,[Boolean]$Disabled,[Boolean]$Scheduled,[System.Collections.Generic.List[PSCustomObject]]$Schedules,[Boolean]$AtReboot,[Boolean]$AtLogon) {
+        # Set Properties
+        $this.Name          = $Name
+        $this.Script        = $Script
+        $this.Parameters    = $Parameters
+        $this.Compatibility = $Compatibility
+        $this.Directory     = $Directory
+        $this.User          = $User
+        $this.Disabled      = $Disabled
+        $this.Scheduled     = $Scheduled
+        $this.Schedules     = $Schedules
+        $this.AtReboot      = $AtReboot
+        $this.AtLogon       = $AtLogon
+        # Create a logger object
+        $this.ozoLogger = (New-OZOLogger)
+        # Iterate over schedules
+        ForEach ($Schedule in $Schedules) {
+            # Instantiate an OZOSchedule object and add it to the schedules list
+            $this.Schedules.Add(([OZOSchedule]::new($Schedule)))
+        }
+    }
+    # METHODS: Validation method
+    [Boolean] Validates() {
+        # Control variable
+        [Boolean] $Return = $true
+        # Determine if the Name property is null or empty
+        If ([String]::IsNullOrEmpty($this.Name) -eq $true) {
+            # Name is null or empty
+            $this.ozoLogger.Write("Missing value for Name.","Error")
+            $Return = $false
+        } Else {
+            # Determine if the Script property is null or empty
+            If ([String]::IsNullOrEmpty($this.Script) -eq $true) {
+                # Compatibility is null or empty
+                $this.ozoLogger.Write(($this.Name + " Script value is missing."),"Error")
                 $Return = $false
-            }    
+            } Else {
+                # Determine if script exists
+                If ([Boolean](Test-Path -Path $this.Script) -eq $true) {
+                    # Determine if Directory is null or empty
+                    If ([String]::IsNullOrEmpty($this.Directory)) {
+                        # Directory is null or empty; set to parent of script
+                        $this.Directory = (Split-Path -Path $this.Script -Parent)
+                    }
+                } Else {
+                    # Script does not exist
+                    $this.ozoLogger.Write(($this.Name + " script does not exist."),"Error")
+                    $Return = $false
+                }
+            }
+            # Determine if Compatibility is not found in Compatibilities
+            If ($this.Compatibilities -NotContains $this.Compatibility) {
+                # Compatibility is not found in Compatibilities
+                $this.Compatibility = "Win8"
+            }
+            # Determine if Directory is null or empty
+            If ([String]::IsNullOrEmpty($this.Directory)) {
+                # Directory is null or empty
+                $this.Directory = (Split-Path -Path $this.Script -Parent)
+            }
+        }
+        # Determine if Scheduled is set and there are no schedules
+        If ($this.Scheduled -eq $true -And ($this.Schedules | Where-Object {$_.Valid -eq $true}).Count -eq 0) {
+            # Scheduled is set and there are no schedules
+            $this.ozoLogger.Write(($this.Name + "Scheduled is enabled but no valid schedules were found."),"Error")
+            $Return = $false
+        }
+        # Return
+        return $Return
+    }
+    # METHODS: TaskExists method
+    Hidden [Boolean] Exists() {
+        # Control variable
+        [Boolean] $Return = $true
+        # Determine if the task exists
+        If ([Boolean](Get-ScheduledTask -TaskName $this.Name -ErrorAction SilentlyContinue) -eq $false) {
+            # Task does not exist; set return
+            $Return = $false
+        }
+        # Return
+        Return $Return
+    }
+    # METHODS: Populate from existing task method
+    Hidden [Void] PopulateFromExistingTask() {
+
+    }
+    # METHODS: AddTask method
+    [Void] AddTask() {
+        # Local variables
+        [System.Collections.Generic.List[Microsoft.Management.Infrastructure.CimInstance]] $Triggers = @()
+        # Determine if the task does not exist and is valid
+        If ($this.Exists() -eq $false -And $this.Validates() -eq $true) {
+            # Determine if AtLogon is false and Schedules is not null and at least one schedule is valid
+            If ($this.AtLogon -eq $false -And $null -ne $this.Schedules -And ($this.Schedules | Where-Object {$_.Valid -eq $true}).Count -gt 0) {
+                # AtLogon is false, Schedules is not null, and there is at least one valid schedule; iterate over the valid schedules and create triggers
+                ForEach ($Schedule in ($this.Schedules | Where-Object {$_.Valid -eq $true})) {
+                    # Create a weekly trigger for each schedule and add the trigger to the list of triggers
+                    $Triggers.Add((New-ScheduledTaskTrigger -Weekly -DaysOfWeek $Schedule.Weekday -At $Schedule.StartTime -RandomDelay $Schedule.RandomDelay))
+                }
+            }
+            # Determine if AtLogon is false and AtReboot is set
+            If ($this.AtLogon -eq $false -And $this.AtReboot -eq $true) {
+                # AtLogon is false and AtReboot is true; create a boot trigger and it to the list of triggers
+                $Triggers.Add((New-ScheduledTaskTrigger -AtStartup))
+            }
+            # Determine if AtLogon is set and Scheduled and AtReboot is false
+            If ($this.AtLogon -eq $true -And $this.Scheduled -eq $false -And $this.AtReboot -eq $false) {
+                # AtLogon is true, Scheduled is false, and AtReboot is false; create a logon trigger and a it to the list of triggers
+                $Triggers.Add((New-ScheduledTaskTrigger -AtLogOn))
+            }
+            # Determine if Disabled is set
+            If ($this.Disabled -eq $true) {
+                # Disabled is set; set parameters for New-ScheduledTaskSettingsSet with the Disabled parameter
+                $settingsParameters = @{
+                    RunOnlyIfNetworkAvailable = $true
+                    Compatibility             = $this.Compatibility
+                    StartWhenAvailable        = $true
+                    Disable                   = $true
+                }
+            } Else {
+                # Disabled is not set; set parameters for New-ScheduledTaskSettingsSet without the Disabled parameter
+                $settingsParameters = @{
+                    RunOnlyIfNetworkAvailable = $true
+                    Compatibility             = $this.Compatibility
+                    StartWhenAvailable        = $true
+                }
+            }
+            # Determine if this script is a PowerShell script
+            If ((Get-Item -Path $this.Script).Extension -eq ".ps1") {
+                # Script is PowerShell; set paramters for New-ScheduledTaskAction with PowerShell executable and arguments
+                $actionParameters = @{
+                    Execute = 'powershell.exe'
+                    Argument = ('-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy RemoteSigned  -File "' + $this.Script + '" ' + $this.Parameters)
+                    WorkingDirectory = $this.Directory
+                }
+            } Else {
+                # Script is not PowerShell; set executable and argument for CMD
+                $actionParameters = @{
+                    Execute = "cmd.exe"
+                    Argument = ('/Q /C "' + $this.Script + '" ' + $this.Parameters)
+                    WorkingDirectory = $this.Directory
+                }
+            }
+            # Determine if AtLogon is set
+            If ($this.AtLogon -eq $true) {
+                # AtLogon is set; set parameters for Register-ScheduledTask without User parameter
+                $scheduledTaskParameters = @{
+                    TaskName = $this.Name
+                    Action   = (New-ScheduledTaskAction @actionParameters)
+                    Trigger  = $Triggers
+                    Settings = (New-ScheduledTaskSettingsSet @settingsParameters)
+                }
+            } Else {
+                # AtLogon is not set; set parameters for Register-ScheduledTask with User parameter
+                $scheduledTaskParameters = @{
+                    TaskName = $this.Name
+                    User     = $this.User
+                    Action   = (New-ScheduledTaskAction @actionParameters)
+                    Trigger  = $Triggers
+                    Settings = (New-ScheduledTaskSettingsSet @settingsParameters)
+                }
+            }
+            # Determine that at least one trigger is defined
+            If ($Triggers -gt 0) {
+                # At least one trigger is defined; try to register the task
+                Try {
+                    Register-ScheduledTask @scheduledTaskParameters -ErrorAction Stop
+                    # Success
+                } Catch {
+                    # Failure
+                    $this.ozoLogger.Write(("Failed to register the " + $this.Name + " task with error " + $_ + "."), "Error")
+                }
+            } Else {
+                # Task exists or no triggers defined
+                $this.ozoLogger.Write("No triggers were defined.", "Error")
+            }
+        }
+    }
+    # METHODS: EnableTask method
+    [Void] EnableTask() {
+        # Determine if task exists
+        If ($this.Exists() -eq $true) {
+            # Task exists; try to enable it
+            Try {
+                Enable-ScheduledTask -TaskName $this.Name -ErrorAction Stop
+                # Success
+            } Catch {
+                # Failure
+                $this.ozoLogger.Write(("Failed to enable the " + $this.Name + " task with error " + $_ + "."),"Error")
+            }
+        }
+    }
+    # METHODS: ExportTask method
+    [Void] ExportTask($OutFile) {
+
+    }
+    # METHODS: DisableTask method
+    [Void] DisableTask() {
+        # Detemrine if the task exists
+        If ($this.Exists() -eq $true) {
+            # Task exists; try to disable
+            Try {
+                Disable-ScheduledTask -TaskName $this.Name -ErrorAction Stop
+                # Success
+            } Catch {
+                # Failure
+                $this.ozoLogger.Write(("Failed to disable the " + $this.Name + " task with error " + $_ + "."), "Error")
+            }
+        }
+    }
+    # METHODS: RemoveTask method
+    [Void] RemoveTask() {
+        # Detemrine if the task exists
+        If ($this.Exists() -eq $true) {
+            # Task exists; call disable task to disable
+            $this.DisableTask()
+            # Try to unregister
+            Try {
+                Unregister-ScheduledTask -TaskName $this.Name -Confirm:$false -ErrorAction Stop
+                # Success
+            } Catch {
+                # Failure
+                $this.ozoLogger.Write(("Failed to remove the " + $this.Name + " task with error " + $_ + "."), "Error")
+            }
+        }
+    }
+    # METHODS: UpdateTask method
+    [Void] UpdateTask() {
+        # Call RemoveTask to disable and remove the task
+        $this.RemoveTask()
+        # Detemine if the task does not exist
+        If ($this.Exists() -eq $false) {
+            # Call AddTask to add the task
+            $this.AddTask()
+        }
+    }
+
+}
+# OZOScheduledTask class
+Class OZOScheduledTasks {
+    # PROPERTIES: PSCustomObjects
+    Hidden [PSCustomObject] $Json      = @()
+    Hidden [PSCustomObject] $ozoLogger = @()
+    # PROPERTIES: PSCustomObject Lists
+    [System.Collections.Generic.List[PSCustomObject]] $Tasks = @()
+    # METHODS: Constructor method - New and Update overload
+    OZOScheduledTask([String]$JsonFile,[String]$JsonString) {
+        # Create an OZOLogger object
+        $this.ozoLogger = (New-OZOLogger)
+        # Determine if the configuration and environment validate
+        If (($this.ValidateConfiguration($JsonFile,$JsonString) -And $this.ValidateEnvironment()) -eq $true) {
+            # Determine if JSON is not null
+            If ($null -ne $this.Json) {
+                # Iterate over the tasks in the JSON
+                ForEach ($Task in $this.Json) {
+                    # Instantiate an OZOTask object for this Task
+                    $this.Tasks.Add(([OZOTask]::new($Task.Name,$Task.Script,$Task.Parameters,$Task.Compatibility,$Task.Directory,"SYSTEM",$Task.Disabled,$Task.Scheduled,$Task.Schedules,$Task.AtReboot,$Task.AtLogon)))
+                }
+            }
+        }
+    }
+    # METHODS: Configuration validation method
+    Hidden [Boolean] ValidateConfiguration($JsonFile,$JsonString) {
+        # Control variable
+        [Boolean] $Return = $true
+        # Determine if operator has provided JSON as file
+        If ([String]::IsNullOrEmpty($JsonFile) -eq $false) {
+            # Operator has provided JSON as a file; try to import
+            Try {
+                $this.Json = (Get-Content -Path $JsonFile -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop)
+                # Success
+            } Catch {
+                # Failure
+                $this.ozoLogger.Write(("Failed to import JSON from " + $JsonFile + "."),"Error")
+                $this.Json = $null
+            }
+        }
+        # Determine if operator has provided JSON as a compressed string
+        If ([String]::IsNullOrEmpty($JsonString)) {
+            # Operator has provided JSON as a compressed string; try to convert
+            Try {
+                $this.Json = ($JsonString | ConvertFrom-Json -ErrorAction Stop)
+                # Success
+            } Catch {
+                # Failure
+                $this.ozoLogger.Write(("Failed to import JSON from " + $JsonString + "."),"Error")
+                $this.Json = $null
+            }
         }
         # Return
         Return $Return
@@ -135,220 +374,171 @@ Class OZOScheduledTask {
     Hidden [Boolean] ValidateEnvironment() {
         # Control variable
         [Boolean] $Return = $true
-        # Determine if the operator is a local administrator
-        If ((Test-OZOLocalAdministrator) -eq $false) {
-            # Operator is not a local administrator; set return
-            $Return = $false
-        }
-        # Determine if TaskDir is null; if so, set to the directory containing TaskScript
-        If ([String]::IsNullOrEmpty($this.taskDir) -eq $true) {
-            # TaskDir is null; set to the directory containing TaskScript
-            $this.taskDir = (Split-Path -Parent $this.taskScript)
-        }
-        # Determine if TaskDir exists
-        If ([Boolean](Test-Path -Path $this.taskDir -PathType Container -ErrorAction SilentlyContinue) -eq $false) {
-            # TaskDir does not exist; set return
-            $this.ozoLogger.Write(("The specified TaskDir " + $this.taskDir + " does not exist. Please specify a valid directory and try again."), "Error")
-            $Return = $false
-        }
-        # Determine if TaskScript exists
-        If ([Boolean](Test-Path -Path $this.taskScript -PathType Leaf -ErrorAction SilentlyContinue) -eq $false) {
-            # TaskScript does not exist; set return
-            $this.ozoLogger.Write(("The specified TaskScript " + $this.taskScript + " does not exist. Please specify a valid script and try again."), "Error")
-            $Return = $false
-        }
         # Return
         Return $Return
-    }
-    # METHODS: TaskExists method
-    Hidden [Boolean] TaskExists() {
-        # Control variable
-        [Boolean] $Return = $true
-        # Determine if the task exists
-        If ([Boolean](Get-ScheduledTask -TaskName $this.taskName -ErrorAction SilentlyContinue) -eq $false) {
-            # Task does not exist; set return
-            $Return = $false
-        }
-        # Return
-        Return $Return
-    }
-    # METHODS: AddTask method
-    Hidden [Boolean] AddTask() {
-        # Control variable
-        [Boolean] $Return = $true
-        # Ensure the task is removed
-        $this.RemoveTask()
-        # Determine if TaskAtLogon is false and TaskSchedule is not null
-        If ($this.taskAtLogon -eq $false -And $null -ne $this.taskSchedules) {
-            # TaskSchedule is not null; iterate over the task schedules and create triggers
-            ForEach ($taskSchedule in $this.taskSchedules) {
-                # Create a weekly trigger for each schedule
-                [Microsoft.Management.Infrastructure.CimInstance]$TaskTrigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $taskSchedule.Weekday -At $taskSchedule.StartTime -RandomDelay $taskSchedule.RandomDelay
-                # Add the trigger to the list of triggers
-                $this.taskTriggers.Add($TaskTrigger)
-            }
-        }
-        # Determine if TaskAtLogon is false and TaskAtReboot is set
-        If ($this.taskAtLogon -eq $false -And $this.taskAtReboot -eq $true) {
-            # TaskAtReboot is set; create a boot trigger
-            [Microsoft.Management.Infrastructure.CimInstance]$TaskTrigger = New-ScheduledTaskTrigger -AtStartup
-            # Add the trigger to the list of triggers
-            $this.taskTriggers.Add($TaskTrigger)
-        }
-        # Determine if TaskAtLogon is set and TaskScheduled and TaskAtReboot are false
-        If ($this.taskAtLogon -eq $true -And $this.taskScheduled -eq $false) {
-            # TaskAtLogon is set; create a logon trigger
-            [Microsoft.Management.Infrastructure.CimInstance]$TaskTrigger = New-ScheduledTaskTrigger -AtLogOn
-            # Add the trigger to the list of triggers
-            $this.taskTriggers.Add($TaskTrigger)
-        }
-        # Determine if TaskDisabled is set
-        If ($this.taskDisabled -eq $true) {
-            # TaskDisabled is set; set parameters for New-ScheduledTaskSettingsSet with the Disabled parameter
-            $taskParameters = @{
-                RunOnlyIfNetworkAvailable = $true
-                Compatibility             = $this.taskCompatibility
-                StartWhenAvailable        = $true
-                Disable                   = $true
-            }
-        } Else {
-            # TaskDisabled is not set; set parameters for New-ScheduledTaskSettingsSet without the Disabled parameter
-            $taskParameters = @{
-                RunOnlyIfNetworkAvailable = $true
-                Compatibility             = $this.taskCompatibility
-                StartWhenAvailable        = $true
-            }
-        }
-        # Define task settings
-        [Microsoft.Management.Infrastructure.CimInstance]$TaskSettings = New-ScheduledTaskSettingsSet @taskParameters
-        # Determine if this script is a PowerShell script
-        If ((Get-Item -Path $this.taskScript).Extension -eq ".ps1") {
-            # Script is PowerShell; set paramters for New-ScheduledTaskAction with PowerShell executable and arguments
-            $taskParameters = @{
-                Execute = 'powershell.exe'
-                Argument = ('-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy RemoteSigned  -File "' + $this.taskScript + '" ' + $this.taskScriptParams)
-                WorkingDirectory = $this.taskDir
-            }
-        } Else {
-            # Script is not PowerShell; set executable and argument for CMD
-            $taskParameters = @{
-                Execute = "cmd.exe"
-                Argument = ('/Q /C "' + $this.taskScript + '" ' + $this.taskScriptParams)
-                WorkingDirectory = $this.taskDir
-            }
-        }
-        # Define the task action
-        [Microsoft.Management.Infrastructure.CimInstance]$TaskAction = New-ScheduledTaskAction @taskParameters
-        # Determine if TaskAtLogon is set
-        If ($this.taskAtLogon -eq $true) {
-            # TaskAtLogon is set; set parameters for Register-ScheduledTask without User parameter
-            $taskParameters = @{
-                TaskName = $this.taskName
-                Trigger  = $this.taskTriggers
-                Action   = $TaskAction
-                Settings = $TaskSettings
-            }
-        } Else {
-            # TaskAtLogon is not set; set parameters for Register-ScheduledTask with User parameter
-            $taskParameters = @{
-                TaskName = $this.taskName
-                Trigger  = $this.taskTriggers
-                User     = $this.taskUser
-                Action   = $TaskAction
-                Settings = $TaskSettings
-            }
-        }
-        # Determine that the task does not exist and at least one trigger is defined
-        If ($this.TaskExists() -eq $false -And $this.taskTriggers.Count -gt 0) {
-            # The task does not exist and at least one trigger is defined; try to register the task
-            Try {
-                Register-ScheduledTask @taskParameters -ErrorAction Stop
-                # Success
-            } Catch {
-                # Failure
-                $this.ozoLogger.Write(("Failed to register the " + $this.taskName + " task with error " + $_ + "."), "Error")
-                $Return = $false
-            }
-        } Else {
-            # Task exists or no triggers defined
-            $this.ozoLogger.Write("The task exists or no triggers were defined.", "Error")
-        }
-        # Return
-        return $Return
-    }
-    # METHODS: RemoveTask method
-    Hidden [Boolean] RemoveTask() {
-        # Control variable
-        [Boolean] $Return = $true
-        # Detemrine if the task exists
-        If ($this.TaskExists() -eq $true) {
-            # Task exists; try to disable and unregister
-            Try {
-                Disable-ScheduledTask -TaskName $this.taskName -ErrorAction Stop
-                Unregister-ScheduledTask -TaskName $this.taskName -Confirm:$false -ErrorAction Stop
-                # Success
-            } Catch {
-                # Failure
-                $this.ozoLogger.Write(("Failed to remove the " + $this.taskName + " scheduled task with error " + $_ + "."), "Error")
-                $Return = $false
-            }
-        }
-        # Return
-        return $Return
     }
 }
+# FUNCTIONS
+# Disable-OZOScheduledTask function
+Function Disable-OZOScheduledtask {
+    <#
+        .SYNOPSIS
+        See description.
+        .DESCRIPTION
+        Disables a scheduled task, if found.
+        .PARAMETER TaskName
+        The name of the task to disable.
+        .EXAMPLE
+        Disable-OZOScheduledTask -TaskName "Update OZO PowerShell Module"
+        .LINK
+        https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Disable-OZOScheduledTask.md
+    #>
+    # Parameters
+    [CmdLetBinding()] Param (
+        [Parameter(Mandatory=$true,HelpMessage="The task to disable")][String]$TaskName
+    )
+    # Get the task
+    [PSCustomObject] $ozoScheduledTask = (Get-OZOScheduledTask -TaskName $TaskName)
+    # Call DisableTask to enable the task
+    $ozoScheduledTask.DisableTask()
+}
+# Enable-OZOScheduledTask function
+Function Enable-OZOScheduledtask {
+    <#
+        .SYNOPSIS
+        See description.
+        .DESCRIPTION
+        Enable a scheduled task, if found.
+        .PARAMETER TaskName
+        The name of the task to enable.
+        .EXAMPLE
+        Enable-OZOScheduledTask -TaskName "Update OZO PowerShell Module"
+        .LINK
+        https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Enable-OZOScheduledTask.md
+    #>
+    # Parameters
+    [CmdLetBinding()] Param (
+        [Parameter(Mandatory=$true,HelpMessage="The task to enable")][String] $TaskName
+    )
+    # Get the task
+    [PSCustomObject] $ozoScheduledTask = (Get-OZOScheduledTask -TaskName $TaskName)
+    # Call EnableTask to enable the task
+    $ozoScheduledTask.EnableTask()
+}
+# Export-OZOScheduledTask function
+Function Export-OZOScheduledTask {
+    <#
+        .SYNOPSIS
+        See description.
+        .DESCRIPTION
+        Exports a scheduled task to JSON, if found.
+        .PARAMETER OutFile
+        The path for the output JSON file.
+        .PARAMETER TaskName
+        The name of the task to export.
+        .EXAMPLE
+        Export-OZOScheduledTask -TaskName "Update OZO PowerShell Module"
+        .LINK
+        https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Export-OZOScheduledTask.md
+    #>
+    # Parameters
+    [CmdLetBinding()] Param (
+        [Parameter(Mandatory=$true,HelpMessage="The path for the output JSON file")][String]$OutFile,
+        [Parameter(Mandatory=$true,HelpMessage="The task to export")][String]$TaskName
+    )
+    # Get the task
+    [PSCustomObject] $ozoScheduledTask = (Get-OZOScheduledTask -TaskName $TaskName)
+    # Call EnableTask to enable the task
+    $ozoScheduledTask.ExportTask($OutFile)
+}
+# Get-OZOScheduledTask function
+Function Get-OZOScheduledTask {
+    <#
+        .SYNOPSIS
+        See description.
+        .DESCRIPTION
+        Get a PSCustomObject representing an existing task, if found.
+        .PARAMETER TaskName
+        The name of the task to get.
+        .EXAMPLE
+        $ozoScheduledTask = (Get-OZOScheduledTask -TaskName "Update OZO PowerShell Module")
+        .LINK
+        https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Get-OZOScheduledTask.md
+    #>
+    # Return an OZOTask object
+    $PSCmdlet.WriteObject(([OZOSTask]::New($TaskName)))
+}
+# New-OZOScheduledTask function
+Function New-OZOScheduledTask {
+    <#
+        .SYNOPSIS
+        See description.
+        .DESCRIPTION
+        Creates scheduled tasks for running scripts. Uses PowerShell to run .ps1 scripts and CMD to run everything else.
+        .PARAMETER JsonFile
+        A JSON file that defines one or more tasks to schedule
+        .PARAMETER JsonString
+        A compressed JSON string that defines one or more tasks to schedule
+        .EXAMPLE
+        New-OZOScheduledTask -JsonFile "C:\Temp\scheduledTasks-example.json"
+        .EXAMPLE
+        Set-OZOScheduledTask -JsonString '[{"Name":"Example Scheduled Task","Script":"C:\\Temp\\example.ps1","Parameters":"","Compatibility":"Win8","Directory":"C:\\Temp","Disabled":true,"Scheduled":true,"Schedules":["@{WeekDay=Monday; StartTime=8:00 AM; RandomDelay=0}","@{WeekDay=Wednesday; StartTime=8:00 AM; RandomDelay=0}","@{WeekDay=Friday; StartTime=8:00 AM; RandomDelay=0}"],"AtReboot":false,"AtLogon":false},{"Name":"Example Logon Task","Script":"C:\\Temp\\logonScript.ps1","Parameters":"","Compatibility":"Win8","Directory":"C:\\Temp","Disabled":true,"Scheduled":false,"Schedules":[],"AtReboot":false,"AtLogon":true}]'
+        .LINK
+        https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/New-OZOScheduledTask.md
+    #>
+    [CmdLetBinding()]Param (
+        [Parameter(Mandatory=$false,HelpMessage="The user who runs Scheduled and AtReboot tasks")][String]$TaskUser = "SYSTEM",
+        [Parameter(Mandatory=$true,HelpMessage="A JSON file that defines one or more tasks to schedule",ParameterSetName="JsonFile")][String]$JsonFile,
+        [Parameter(Mandatory=$true,HelpMessage="A compressed JSON string that defines one or more tasks to schedule",ParameterSetName="JsonString")][String]$JsonString
 
+    )
+    # Instantiate an OZOScheduledTask object
+    [PSCustomObject] $ozoScheduledTasks = ([OZOScheduledTasks]::new($JsonFile,$JsonString))
+    # Iterate over the tasks
+    ForEach ($Task in $ozoScheduledTasks.Tasks) {
+        # Determine if the task does not exist and validates
+        If ($Task.Exists() -eq $false -And $Task.Validates() -eq $true) {
+            # Task validates; update it
+            $Task.AddTask()
+        }
+    }
+}
+# Set-OZOScheduledTask function
 Function Set-OZOScheduledTask {
     <#
         .SYNOPSIS
         See description.
         .DESCRIPTION
         Updates scheduled tasks for running scripts. Uses PowerShell to run .ps1 scripts and CMD to run everything else.
-        .PARAMETER TaskName
-        The name of the scheduled task.
-        .PARAMETER TaskScript
-        The absolute path to the script to run.
-        .PARAMETER TaskScriptParams
-        Parameters for the script.
-        .PARAMETER TaskCompatibility
-        Compatibility mode for the task. Allowed values are "At", "V1", "Vista", "Win7", and "Win8". Defaults to "Win8".
-        .PARAMETER TaskDir
-        The directory where the task should be run. Defaults to the directory containing "TaskScript".
-        .PARAMETER TaskDisabled
-        Whether the task is disabled on creation.
-        .PARAMETER TaskScheduled
-        Run the task on a scheduled day of the week. When this parameter is specified, "TaskSchedules" is required and "TaskAtReboot" is optional. Exclusive with "TaskAtLogon".
-        .PARAMETER TaskSchedules
-        A string containing a compressed JSON list of the schedules for the task. See https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Set-OZOScheduledTask.md for more information.
-        .PARAMETER TaskAtReboot
-        Run the task at system startup.
-        .PARAMETER TaskAtLogon
-        Run the task at user logon. Exclustive with "TaskScheduled".
+        .PARAMETER JsonFile
+        A JSON file that defines one or more tasks to schedule
+        .PARAMETER JsonString
+        A compressed JSON string that defines one or more tasks to schedule
         .EXAMPLE
-        Set-OZOScheduledTask -TaskName "Update OZO PowerShell Module" -TaskScript "C:\Windows\Program Files\WindowsPowerShell\Scripts\ozo-update-ozo-powershell-module.ps1" -TaskSchedules '[{"Weekday":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"Weekday":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"Weekday":"Friday","StartTime":"8:00 AM","RandomDelay":0}]' -TaskAtReboot
+        Set-OZOScheduledTask -JsonFile "C:\Temp\scheduledTasks-example.json"
         .EXAMPLE
-        Set-OZOScheduledTask -TaskName "Update OZO PowerShell Module" -TaskScript "C:\Windows\Program Files\WindowsPowerShell\Scripts\ozo-register-ozo-powershell-repository.ps1" -TaskAtLogon
+        Set-OZOScheduledTask -JsonString '[{"Name":"Example Scheduled Task","Script":"C:\\Temp\\example.ps1","Parameters":"","Compatibility":"Win8","Directory":"C:\\Temp","Disabled":true,"Scheduled":true,"Schedules":["@{WeekDay=Monday; StartTime=8:00 AM; RandomDelay=0}","@{WeekDay=Wednesday; StartTime=8:00 AM; RandomDelay=0}","@{WeekDay=Friday; StartTime=8:00 AM; RandomDelay=0}"],"AtReboot":false,"AtLogon":false},{"Name":"Example Logon Task","Script":"C:\\Temp\\logonScript.ps1","Parameters":"","Compatibility":"Win8","Directory":"C:\\Temp","Disabled":true,"Scheduled":false,"Schedules":[],"AtReboot":false,"AtLogon":true}]'
         .LINK
         https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Set-OZOScheduledTask.md
     #>
     [CmdLetBinding()]Param (
-        [Parameter(Mandatory=$true,HelpMessage="The name of the scheduled task")][String]$TaskName,
-        [Parameter(Mandatory=$true,HelpMessage="The absolute path to the script to run")][String]$TaskScript,
-        [Parameter(Mandatory=$false,HelpMessage="Parameters for the script")][String]$TaskScriptParams = $null,
-        [Parameter(Mandatory=$false,HelpMessage="The directory where the task should be run")][String]$TaskDir = $null,
-        [Parameter(Mandatory=$false,HelpMessage="Compatibility mode for the task")][ValidateSet("At","V1","Vista","Win7","Win8")][String]$TaskCompatibility = "Win8",
-        [Parameter(Mandatory=$false,HelpMessage="Whether the task is disabled on creation")][Switch]$TaskDisabled,
-        [Parameter(Mandatory=$false,HelpMessage="Run the task on a scheduled day of the week",ParameterSetName="Scheduled")][Switch]$TaskScheduled,
-        [Parameter(Mandatory=$true,HelpMessage="A compressed JSON list of dictionaries representing the schedules for the task",ParameterSetName="Scheduled")][String]$TaskSchedules = $null,
-        [Parameter(Mandatory=$false,HelpMessage="The user to run the task as",ParameterSetName="Scheduled")][String]$TaskUser = "SYSTEM",
-        [Parameter(Mandatory=$false,HelpMessage="Run the task at reboot",ParameterSetName="Scheduled")][Switch]$TaskAtReboot,
-        [Parameter(Mandatory=$false,HelpMessage="Run the task at logon",ParameterSetName="AtLogon")][Switch]$TaskAtLogon
+        [Parameter(Mandatory=$false,HelpMessage="The user who runs Scheduled and AtReboot tasks")][String]$TaskUser = "SYSTEM",
+        [Parameter(Mandatory=$true,HelpMessage="A JSON file that defines one or more tasks to schedule",ParameterSetName="JsonFile")][String]$JsonFile,
+        [Parameter(Mandatory=$true,HelpMessage="A compressed JSON string that defines one or more tasks to schedule",ParameterSetName="JsonString")][String]$JsonString
 
     )
-    # Create an OZOScheduledTask object
-    [OZOScheduledTask]::new($TaskName,$TaskScript,$TaskScriptParams,$TaskDir,$TaskCompatibility,$TaskDisabled.IsPresent,$TaskScheduled.IsPresent,$TaskSchedules,$TaskUser,$TaskAtReboot.IsPresent,$TaskAtLogon.IsPresent) | Out-Null
+    # Instantiate an OZOScheduledTask object
+    [PSCustomObject] $ozoScheduledTasks = ([OZOScheduledTasks]::new($JsonFile,$JsonString))
+    # Iterate over the tasks
+    ForEach ($Task in $ozoScheduledTasks.Tasks) {
+        # Determine if the task exists and validates
+        If ($Task.Exists() -eq $true -And $Task.Validates() -eq $true) {
+            # Task exists validates; update it
+            $Task.UpdateTask()
+        }
+    }
 }
-
+# Remove-OZOScheduledTask function
 Function Remove-OZOScheduledTask {
     <#
         .SYNOPSIS
@@ -366,11 +556,17 @@ Function Remove-OZOScheduledTask {
     [CmdLetBinding()]Param (
         [Parameter(Mandatory=$true,HelpMessage="The name of the task to remove")][String]$TaskName
     )
-    # Create an OZOScheduledTask object
-    [OZOScheduledTask]::new($TaskName) | Out-Null
+    # Get the task
+    [PSCustomObject] $ozoScheduledTask = (Get-OZOScheduledTask -TaskName $TaskName)
+    # Call RemoveTask to disable and remove the task
+    $ozoScheduledTask.RemoveTask()
 }
 
 Export-ModuleMember -Function `
+    Enable-OZOScheduledTask,
+    Export-OZOScheduledTask,
+    Disable-OZOScheduledTask,
+    Get-OZOScheduledTask,
     Set-OZOScheduledTask,
     Remove-OZOScheduledTask
 
