@@ -40,6 +40,7 @@ All properties are hidden and managed internally:
 - `$taskRandomDelayMax`: Maximum random delay in seconds (0-3600)
 - `$taskTriggers`: CIM instances representing task triggers
 - `$taskWeekdays`: List of allowed weekdays for tasks
+- `ozoLogger`: An OZOLogger object for logging
 - `$taskSchedules`: Parsed schedule configuration
 - `$taskName`: Name of the scheduled task
 - `$taskScript`: Path to the script to execute
@@ -49,7 +50,6 @@ All properties are hidden and managed internally:
 - `$taskUser`: User account for task execution
 
 ## Methods
-
 - **ValidateConfiguration()**
   Validates that the task configuration is valid. Checks that at least one trigger is defined and that TaskSchedules is valid JSON when TaskScheduled is true.
   - Returns: `Boolean` - `$true` if valid, `$false` otherwise
