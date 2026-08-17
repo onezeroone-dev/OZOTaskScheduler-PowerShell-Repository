@@ -37,6 +37,6 @@
         "Scheduled":false,
         "Schedules":[],
         "AtReboot":false,
-        "AtLogon":true
+        "AtLogon":false
     }
 ]

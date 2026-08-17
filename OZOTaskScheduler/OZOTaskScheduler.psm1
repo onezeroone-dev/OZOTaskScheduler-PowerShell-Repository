@@ -482,7 +482,7 @@ Function New-OZOScheduledTask {
         .EXAMPLE
         New-OZOScheduledTask -JsonFile "C:\Temp\scheduledTasks-example.json"
         .EXAMPLE
-        Set-OZOScheduledTask -JsonString '[{"Name":"Example Scheduled Task","Script":"C:\\Temp\\example.ps1","Parameters":"","Compatibility":"Win8","Directory":"C:\\Temp","Disabled":true,"Scheduled":true,"Schedules":["@{WeekDay=Monday; StartTime=8:00 AM; RandomDelay=0}","@{WeekDay=Wednesday; StartTime=8:00 AM; RandomDelay=0}","@{WeekDay=Friday; StartTime=8:00 AM; RandomDelay=0}"],"AtReboot":false,"AtLogon":false},{"Name":"Example Logon Task","Script":"C:\\Temp\\logonScript.ps1","Parameters":"","Compatibility":"Win8","Directory":"C:\\Temp","Disabled":true,"Scheduled":false,"Schedules":[],"AtReboot":false,"AtLogon":true}]'
+        Set-OZOScheduledTask -JsonString '[{"Name":"Example Scheduled Task","Script":"C:\\Temp\\example.ps1","Parameters":"","Compatibility":"Win8","Directory":"C:\\Temp","Disabled":true,"Scheduled":true,"Schedules":["@{WeekDay=Monday; StartTime=8:00 AM; RandomDelay=0}","@{WeekDay=Wednesday; StartTime=8:00 AM; RandomDelay=0}","@{WeekDay=Friday; StartTime=8:00 AM; RandomDelay=0}"],"AtReboot":false,"AtLogon":false},{"Name":"Example Logon Task","Script":"C:\\Temp\\logonScript.ps1","Parameters":"","Compatibility":"Win8","Directory":"C:\\Temp","Disabled":true,"Scheduled":false,"Schedules":[],"AtReboot":false,"AtLogon":false}]'
         .LINK
         https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/New-OZOScheduledTask.md
     #>
@@ -517,7 +517,7 @@ Function Set-OZOScheduledTask {
         .EXAMPLE
         Set-OZOScheduledTask -JsonFile "C:\Temp\scheduledTasks-example.json"
         .EXAMPLE
-        Set-OZOScheduledTask -JsonString '[{"Name":"Example Scheduled Task","Script":"C:\\Temp\\example.ps1","Parameters":"","Compatibility":"Win8","Directory":"C:\\Temp","Disabled":true,"Scheduled":true,"Schedules":["@{WeekDay=Monday; StartTime=8:00 AM; RandomDelay=0}","@{WeekDay=Wednesday; StartTime=8:00 AM; RandomDelay=0}","@{WeekDay=Friday; StartTime=8:00 AM; RandomDelay=0}"],"AtReboot":false,"AtLogon":false},{"Name":"Example Logon Task","Script":"C:\\Temp\\logonScript.ps1","Parameters":"","Compatibility":"Win8","Directory":"C:\\Temp","Disabled":true,"Scheduled":false,"Schedules":[],"AtReboot":false,"AtLogon":true}]'
+        Set-OZOScheduledTask -JsonString '[{"Name":"Example Scheduled Task","Script":"C:\\Temp\\example.ps1","Parameters":"","Compatibility":"Win8","Directory":"C:\\Temp","Disabled":true,"Scheduled":true,"Schedules":["@{WeekDay=Monday; StartTime=8:00 AM; RandomDelay=0}","@{WeekDay=Wednesday; StartTime=8:00 AM; RandomDelay=0}","@{WeekDay=Friday; StartTime=8:00 AM; RandomDelay=0}"],"AtReboot":false,"AtLogon":false},{"Name":"Example Logon Task","Script":"C:\\Temp\\logonScript.ps1","Parameters":"","Compatibility":"Win8","Directory":"C:\\Temp","Disabled":true,"Scheduled":false,"Schedules":[],"AtReboot":false,"AtLogon":false}]'
         .LINK
         https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Set-OZOScheduledTask.md
     #>
