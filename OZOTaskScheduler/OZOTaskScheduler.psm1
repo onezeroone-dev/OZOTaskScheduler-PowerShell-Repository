@@ -148,13 +148,13 @@ Class OZOScheduledTask {
         # Determine if TaskDir exists
         If ([Boolean](Test-Path -Path $this.taskDir -PathType Container -ErrorAction SilentlyContinue) -eq $false) {
             # TaskDir does not exist; set return
-            Write-OZOProvider -Message ("The specified TaskDir " + $this.taskDir + " does not exist. Please specify a valid directory and try again.") -Level "Error"
+            $this.ozoLogger.Write(("The specified TaskDir " + $this.taskDir + " does not exist. Please specify a valid directory and try again."), "Error")
             $Return = $false
         }
         # Determine if TaskScript exists
         If ([Boolean](Test-Path -Path $this.taskScript -PathType Leaf -ErrorAction SilentlyContinue) -eq $false) {
             # TaskScript does not exist; set return
-            Write-OZOProvider -Message ("The specified TaskScript " + $this.taskScript + " does not exist. Please specify a valid script and try again.") -Level "Error"
+            $this.ozoLogger.Write(("The specified TaskScript " + $this.taskScript + " does not exist. Please specify a valid script and try again."), "Error")
             $Return = $false
         }
         # Return
@@ -266,12 +266,12 @@ Class OZOScheduledTask {
                 # Success
             } Catch {
                 # Failure
-                Write-OZOProvider -Message ("Failed to register the " + $this.taskName + " task with error " + $_ + ".") -Level "Error"
+                $this.ozoLogger.Write(("Failed to register the " + $this.taskName + " task with error " + $_ + "."), "Error")
                 $Return = $false
             }
         } Else {
             # Task exists or no triggers defined
-            Write-OZOProvider -Message "The task exists or no triggers were defined." -Level "Error"
+            $this.ozoLogger.Write("The task exists or no triggers were defined.", "Error")
         }
         # Return
         return $Return
@@ -289,7 +289,7 @@ Class OZOScheduledTask {
                 # Success
             } Catch {
                 # Failure
-                Write-OZOProvider -Message ("Failed to remove the " + $this.taskName + " scheduled task with error " + $_ + ".") -Level "Error"
+                $this.ozoLogger.Write(("Failed to remove the " + $this.taskName + " scheduled task with error " + $_ + "."), "Error")
                 $Return = $false
             }
         }
@@ -370,7 +370,7 @@ Function Remove-OZOScheduledTask {
     [OZOScheduledTask]::new($TaskName) | Out-Null
 }
 
-Export-ModuleMember `
+Export-ModuleMember -Function `
     Set-OZOScheduledTask,
     Remove-OZOScheduledTask
 
