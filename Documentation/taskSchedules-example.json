@@ -1,0 +1,17 @@
+[
+    {
+        "WeekDay":"Monday",
+        "StartTime":"8:00 AM",
+        "RandomDelay":0
+    },
+    {
+        "WeekDay":"Wednesday",
+        "StartTime":"8:00 AM",
+        "RandomDelay":0
+    },
+    {
+        "WeekDay":"Friday",
+        "StartTime":"8:00 AM",
+        "RandomDelay":0
+    }
+]
