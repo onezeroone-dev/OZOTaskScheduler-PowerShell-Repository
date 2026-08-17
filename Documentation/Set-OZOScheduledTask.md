@@ -71,14 +71,13 @@ The _TaskSchedules_ parameter is a string containing a compressed JSON list of t
 ```
 You can define your JSON in any text editor and save it as a file e.g., [`taskSchedules-example.json`](taskSchedules-example.json) and convert your file to a compressed JSON string with:
 ```powershell
-(Get-Content .\taskSchedules-example.json -Raw | ConvertFrom-Json) | ConvertTo-Json -Compress
+Convert-OZOJsonFileToString -Path .\taskSchedules-example.json
 [{"WeekDay":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Friday","StartTime":"8:00 AM","RandomDelay":0}]
 ```
-The resulting compressed JSON should be encapsulated in single quotes (') so PowerShell interprets it as one continuous string:
+Encapsulate the resulting compressed JSON in single quotes (') so PowerShell interprets it as one continuous string which can be passed as the value for _TaskSchedules_:
 ```powershell
 '[{"WeekDay":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Friday","StartTime":"8:00 AM","RandomDelay":0}]'
 ```
-This string can then be passed as the value for _TaskSchedules_.
 
 ## Examples
 ### Example 1
