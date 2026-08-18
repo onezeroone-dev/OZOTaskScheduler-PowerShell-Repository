@@ -18,12 +18,18 @@ Import-Module OZOTaskScheduler
 ```
 
 ## Functions
+- [Disable-OZOScheduledTask](Documentation/Disable-OZOScheduledTask.md)
+- [Enable-OZOScheduledTask](Documentation/Enable-OZOScheduledTask.md)
+- [Export-OZOScheduledTask](Documentation/Export-OZOScheduledTask.md)
+- [Get-OZOScheduledTask](Documentation/Get-OZOScheduledTask.md)
 - [New-OZOScheduledTask](Documentation/New-OZOScheduledTask.md)
 - [Set-OZOScheduledTask](Documentation/Set-OZOScheduledTask.md)
 - [Remove-OZOScheduledTask](Documentation/Remove-OZOScheduledTask.md)
 
 ## Classes
-- [OZOScheduledTask](Documentation/OZOScheduledTask.md)
+- [OZOSchedule](Documentation/OZOSchedule.md)
+- [OZOTask](Documentation/OZOTask.md)
+- [OZOScheduledTasks](Documentation/OZOScheduledTasks.md)
 
 ## Logging
 When available, messages are written to the [_One Zero One_ event provider](https://github.com/onezeroone-dev/OZOLogger-PowerShell-Module/blob/main/README.md). Otherwise, events are written to the _Microsoft-Windows-PowerShell_ provider as _Information_ events using event ID *4100*.
