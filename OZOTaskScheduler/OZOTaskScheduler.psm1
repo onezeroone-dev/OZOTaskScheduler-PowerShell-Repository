@@ -96,9 +96,8 @@ Class OZOTask {
     # PROPERTIES: PSCustomObjects
     Hidden [PSCustomObject] $ozoLogger = $null
     Hidden [PSCustomObject] $OnceDateTime = $null
-    # PROPERTIES: PSCustomObject Lists
-    Hidden [System.Collections.Generic.List[PSCustomObject]] $Schedules = @()
-    [System.Collections.Generic.List[PSCustomObject]] $OZOSchedules = @()
+    # PROPERTIES: OZOSchedule Lists
+    [System.Collections.Generic.List[OZOSchedule]] $OZOSchedules = @()
     # PROPERTIES: Strings
     [String] $Name          = $null
     [String] $Script        = $null
@@ -131,7 +130,6 @@ Class OZOTask {
         $this.User          = $User
         $this.Disabled      = $Disabled
         $this.Scheduled     = $Scheduled
-        $this.Schedules     = $Schedules
         $this.Once          = $Once
         $this.AtReboot      = $AtReboot
         $this.AtLogon       = $AtLogon
@@ -145,7 +143,7 @@ Class OZOTask {
         # Iterate over once date times
         If ($this.Once -eq $true) {
             # Set OnceDateTime
-            $this.OnceDateTime = $OnceDateTime
+            $this.OnceDateTime = [OZOOnceDateTime]::new($OnceDateTime)
         }
     }
     # METHODS: Validation method
@@ -183,9 +181,15 @@ Class OZOTask {
                 $this.ozoLogger.Write(($this.Name + "Scheduled is enabled but no valid schedules were found."),"Error")
                 $Return = $false
             }
-            # Determine if Once is true and OnceDateTime is not null and OnceDateTime is not valid
-            If ($this.Once -eq $true -And $null -ne $this.OnceDateTime -And $this.OnceDateTime.Valid -eq $false) {
-                # Once is true and OnceDateTime is not valid
+            # Determine if Once is true and OnceDateTime is null
+            If ($this.Once -eq $true -And $null -eq $this.OnceDateTime) {
+                # Once is true and OnceDateTime is null
+                $this.ozoLogger.Write(($this.Name + "Once is enabled but OnceDateTime is null."),"Error")
+                $Return = $false
+            }
+            # Determine if Once is true and OnceDateTime is null and OnceDateTime is not valid
+            If ($this.Once -eq $true -And $null -eq $this.OnceDateTime -And $this.OnceDateTime.Valid -eq $false) {
+                # Once is true and OnceDateTime not null and OnceDateTime is not valid
                 $this.ozoLogger.Write(($this.Name + "Once is enabled but OnceDateTime is not valid."),"Error")
                 $Return = $false
             }
@@ -285,9 +289,9 @@ Class OZOTask {
                         $Triggers.Add((New-ScheduledTaskTrigger -Weekly -DaysOfWeek $Schedule.Weekday -At $Schedule.StartTime -RandomDelay (New-TimeSpan -Start [DateTime]$Schedule.StartTime -End ([DateTime]($Schedule.StartTime).AddSeconds($Schedule.RandomDelay)))))
                     }
                 }
-                # Determine Once is true and OnceDateTime is valid
-                If ($this.Once -eq $true -And $this.OnceDateTime.Valid -eq $true) {
-                    # Once is true, and OnceDateTime is valid; create a one-time trigger and add it to the list of triggers
+                # Determine Once is true and OnceDateTime is not null and is valid
+                If ($this.Once -eq $true -And $null -ne $this.OnceDateTime -And $this.OnceDateTime.Valid -eq $true) {
+                    # Once is true, and OnceDateTime is not null and is valid; create a one-time trigger and add it to the list of triggers
                     $Triggers.Add((New-ScheduledTaskTrigger -Once -At $this.OnceDateTime.DateTime -RandomDelay (New-TimeSpan -Start [DateTime]$this.OnceDateTime.DateTime -End ([DateTime]($this.OnceDateTime.DateTime).AddSeconds($this.OnceDateTime.RandomDelay)))))
                 }
                 # Determine AtReboot is true
@@ -596,7 +600,7 @@ Function New-OZOScheduledTask {
     # Instantiate an OZOJsonTask object
     [PSCustomObject] $ozoJsonTask = ([OZOJsonTask]::new($JsonFile,$JsonString))
     # Determine if the task does not exist and validates
-    If ($null -ne $ozoJsonTask -And $ozoJsonTask.Task.Exists() -eq $false -And $ozoJsonTask.Task.Validates() -eq $true) {
+    If ($null -ne $ozoJsonTask -And $null -ne $ozoJsonTask.Task -And $ozoJsonTask.Task.Exists() -eq $false -And $ozoJsonTask.Task.Validates() -eq $true) {
         # Task does not exiust and validates; add it
         $ozoJsonTask.Task.AddTask()
     }
@@ -627,7 +631,7 @@ Function Set-OZOScheduledTask {
     # Instantiate an OZOJsonTask object
     [PSCustomObject] $ozoJsonTask = ([OZOJsonTask]::new($JsonFile,$JsonString))
     # Determine if the task exists and validates
-    If ($ozoJsonTask.Task.Exists() -eq $true -And $ozoJsonTask.Task.Validates() -eq $true) {
+    If ($null -ne $ozoJsonTask -And $null -ne $ozoJsonTask.Task -And $ozoJsonTask.Task.Exists() -eq $true -And $ozoJsonTask.Task.Validates() -eq $true) {
         # Task exists and validates; update it
         $ozoJsonTask.Task.UpdateTask()
     }
