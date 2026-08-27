@@ -94,9 +94,10 @@ Class OZOTask {
     [Boolean] $Once      = $false
     [Boolean] $AtReboot  = $false
     [Boolean] $AtLogon   = $false
+    # PROPERTIES: OZOOnceDateTimes
+    Hidden [OZOOnceDateTime] $OnceDateTime = $null
     # PROPERTIES: PSCustomObjects
     Hidden [PSCustomObject] $ozoLogger = $null
-    Hidden [PSCustomObject] $OnceDateTime = $null
     # PROPERTIES: OZOSchedule Lists
     [System.Collections.Generic.List[OZOSchedule]] $OZOSchedules = @()
     # PROPERTIES: Strings
@@ -121,7 +122,7 @@ Class OZOTask {
         }
     }
     # METHODS: Constructor method - full
-    OZOTask([String]$Name,[String]$Script,[String]$Parameters,[String]$Compatibility,[String]$Directory,[String]$User,[Boolean]$Disabled,[Boolean]$Scheduled,[System.Collections.Generic.List[PSCustomObject]]$Schedules,[Boolean]$Once,[PSCustomObject]$OnceDateTime,[Boolean]$AtReboot,[Boolean]$AtLogon) {
+    OZOTask([String]$Name,[String]$Script,[String]$Parameters,[String]$Compatibility,[String]$Directory,[String]$User,[Boolean]$Disabled,[Boolean]$Scheduled,[System.Collections.Generic.List[System.Collections.IEnumerable]]$Schedules,[Boolean]$Once,[PSCustomObject]$OnceDateTime,[Boolean]$AtReboot,[Boolean]$AtLogon) {
         # Set Properties
         $this.Name          = $Name
         $this.Script        = $Script
