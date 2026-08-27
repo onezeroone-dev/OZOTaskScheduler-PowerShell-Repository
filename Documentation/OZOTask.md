@@ -11,17 +11,17 @@ This is an **internal class** used by the module's public functions. It is not i
 
 **Minimal Constructor**
 ```
-OZOTask($Name:String, $Script:String, $Parameters:String, $Compatibility:String, $Directory:String, $User:String, $Disabled:Boolean, $Scheduled:Boolean, $Schedules:System.Collections.Generic.List[System.Collections.IEnumerable], $Once:Boolean, $OnceDateTime:PSCustomObject, $AtReboot:Boolean, $AtLogon:Boolean)
+OZOTask($Name:String)
 ```
 Creates a new instance for an existing task lookup or a task that will be managed by name.
-- `$Name`: The name of the scheduled task
+- `$Name`: The name of the task
 
 **Full Constructor**
 ```
 OZOTask($Name:String, $Script:String, $Parameters:String, $Compatibility:String, $Directory:String, $User:String, $Disabled:Boolean, $Scheduled:Boolean, $Schedules:System.Collections.Generic.List[System.Collections.IEnumerable], $Once:Boolean, $OnceDateTime:PSCustomObject, $AtReboot:Boolean, $AtLogon:Boolean)
 ```
 Creates a new instance for task creation or update operations.
-- `$Name`: The name of the scheduled task
+- `$Name`: The name of the task
 - `$Script`: The absolute path to the script or executable to run
 - `$Parameters`: Optional parameters to pass to the script or program
 - `$Compatibility`: Task scheduler compatibility mode
