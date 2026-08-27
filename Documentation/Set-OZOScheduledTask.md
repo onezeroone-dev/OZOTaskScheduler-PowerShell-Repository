@@ -70,7 +70,7 @@ The following example shows an _AtLogon_ task:
 ```json
 {
     "Name":"Example AtLogon Task",
-    "Script":"C:\\Temp\\OZOTaskScheduler-ScheduledTask-Example.ps1",
+    "Script":"C:\\Temp\\OZOTaskScheduler-AtLogonTask-Example.ps1",
     "Parameters":"",
     "Directory":"C:\\Temp",
     "Disabled":true,
