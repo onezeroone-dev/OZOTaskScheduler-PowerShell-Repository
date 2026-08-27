@@ -12,7 +12,7 @@ Class OZOSchedule {
     [String] $StartTime = $null
     [String] $WeekDay   = $null
     # PROPERTIES: String Lists
-    [System.Collections.Generic.List[String]] $Weekdays = @("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday")
+    Hidden [System.Collections.Generic.List[String]] $Weekdays = @("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday")
     # METHODS: Constructor method
     OZOSchedule($Schedule) {
         # Set properties
@@ -53,7 +53,7 @@ Class OZOTask {
     [Boolean] $AtReboot  = $false
     [Boolean] $AtLogon   = $false
     # PROPERTIES: PSCustomObjects
-    [PSCustomObject] $ozoLogger = $null
+    Hidden [PSCustomObject] $ozoLogger = $null
     # PROPERTIES: PSCustomObject Lists
     [System.Collections.Generic.List[PSCustomObject]] $Schedules = @()
     # PROPERTIES: Strings
@@ -64,7 +64,7 @@ Class OZOTask {
     [String] $Directory     = $null
     [String] $User          = $null
     # PROPERTIES: String Lists
-    [System.Collections.Generic.List[String]] $Compatibilities = @("At","V1","Vista","Win7","Win8")
+    Hidden [System.Collections.Generic.List[String]] $Compatibilities = @("At","V1","Vista","Win7","Win8")
     # METHODS: Constructor method - Disable, Enable, Export, Get, Remove
     OZOTask([String]$Name) {
         # Set Properties
@@ -241,7 +241,7 @@ Class OZOTask {
                 }
             }
             # Determine that at least one trigger is defined
-            If ($Triggers -gt 0) {
+            If ($Triggers.Count -gt 0) {
                 # At least one trigger is defined; try to register the task
                 Try {
                     Register-ScheduledTask @scheduledTaskParameters -ErrorAction Stop
@@ -314,11 +314,11 @@ Class OZOTask {
 }
 # OZOScheduledTask class
 Class OZOJsonTask {
+    # PROPERTIES: Hidden PSCustomObjects
+    Hidden [PSCustomObject] $Json      = $null
+    Hidden [PSCustomObject] $ozoLogger = $null
     # PROPERTIES: PSCustomObjects
-    Hidden [PSCustomObject] $Json      = @()
-    Hidden [PSCustomObject] $ozoLogger = @()
-    # PROPERTIES: PSCustomObject Lists
-    [System.Collections.Generic.List[PSCustomObject]] $Task = @()
+    [OZOTask] $Task = $null
     # METHODS: Constructor method
     OZOJsonTask([String]$JsonFile,[String]$JsonString) {
         # Create an OZOLogger object
@@ -327,8 +327,20 @@ Class OZOJsonTask {
         If (($this.ValidateConfiguration($JsonFile,$JsonString) -And $this.ValidateEnvironment()) -eq $true) {
             # Determine if JSON is not null
             If ($null -ne $this.Json) {
-            # Instantiate an OZOTask object for this Task
-            $this.Task.Add(([OZOTask]::new($this.Json.Name,$this.Json.Script,$this.Json.Parameters,$this.Json.Compatibility,$this.Json.Directory,"SYSTEM",$this.Json.Disabled,$this.Json.Scheduled,$this.Json.Schedules,$this.Json.AtReboot,$this.Json.AtLogon)))
+                # Instantiate an OZOTask object for this Task
+                $this.Task = [OZOTask]::new(
+                    $this.Json.Name,
+                    $this.Json.Script,
+                    $this.Json.Parameters,
+                    $this.Json.Compatibility,
+                    $this.Json.Directory,
+                    "SYSTEM",
+                    $this.Json.Disabled,
+                    $this.Json.Scheduled,
+                    $this.Json.Schedules,
+                    $this.Json.AtReboot,
+                    $this.Json.AtLogon
+                )
             }
         }
     }
@@ -336,29 +348,37 @@ Class OZOJsonTask {
     Hidden [Boolean] ValidateConfiguration($JsonFile,$JsonString) {
         # Control variable
         [Boolean] $Return = $true
-        # Determine if operator has provided JSON as file
-        If ([String]::IsNullOrEmpty($JsonFile) -eq $false) {
-            # Operator has provided JSON as a file; try to import
-            Try {
-                $this.Json = (Get-Content -Path $JsonFile -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop)
-                # Success
-            } Catch {
-                # Failure
-                $this.ozoLogger.Write(("Failed to import JSON from " + $JsonFile + "."),"Error")
-                $this.Json = $null
-            }
+        # Determine if both JsonFile and JsonString are provided
+        If ([String]::IsNullOrEmpty($JsonFile) -eq $false -And [String]::IsNullOrEmpty($JsonString) -eq $false) {
+            # Both JsonFile and JsonString are provided; log error and return false
+            $this.ozoLogger.Write("Specify either JsonFile or JsonString, not both.", "Error")
+            return $false
         }
-        # Determine if operator has provided JSON as a compressed string
-        If ([String]::IsNullOrEmpty($JsonString)) {
-            # Operator has provided JSON as a compressed string; try to convert
-            Try {
+
+        If ([String]::IsNullOrEmpty($JsonFile) -eq $true -And [String]::IsNullOrEmpty($JsonString) -eq $true) {
+            $this.ozoLogger.Write("Either JsonFile or JsonString is required.", "Error")
+            return $false
+        }
+        # Try to get the JSON content from the provided file or string
+        Try {
+            # Determine if JsonFile is not null or empty
+            If ([String]::IsNullOrEmpty($JsonFile) -eq $false) {
+                $this.Json = (Get-Content -Path $JsonFile -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop)
+            # Elseif determine if JsonString is not null or empty
+            } ElseIf ([String]::IsNullOrEmpty($JsonString) -eq $false) {
                 $this.Json = ($JsonString | ConvertFrom-Json -ErrorAction Stop)
-                # Success
-            } Catch {
-                # Failure
-                $this.ozoLogger.Write(("Failed to import JSON from " + $JsonString + "."),"Error")
-                $this.Json = $null
             }
+            # Success
+        } Catch {
+            # Failure
+            $this.ozoLogger.Write(("Failed to import JSON."), "Error")
+            $this.Json = $null
+            return $false
+        }
+        # Determine if JSON is null
+        If ($null -eq $this.Json) {
+            $this.ozoLogger.Write("JSON content is null or empty.", "Error")
+            return $false
         }
         # Return
         Return $Return
@@ -373,7 +393,7 @@ Class OZOJsonTask {
 }
 # FUNCTIONS
 # Disable-OZOScheduledTask function
-Function Disable-OZOScheduledtask {
+Function Disable-OZOScheduledTask {
     <#
         .SYNOPSIS
         See description.
@@ -392,11 +412,14 @@ Function Disable-OZOScheduledtask {
     )
     # Get the task
     [PSCustomObject] $ozoGetScheduledTask = (Get-OZOScheduledTask -TaskName $TaskName)
-    # Call DisableTask to enable the task
-    $ozoGetScheduledTask.DisableTask()
+    # Determine if the task is not null
+    if ($null -ne $ozoGetScheduledTask -And $null -ne $ozoGetScheduledTask.Task) {
+        # Task is not null; call DisableTask to disable the task
+        $ozoGetScheduledTask.DisableTask()
+    }    
 }
 # Enable-OZOScheduledTask function
-Function Enable-OZOScheduledtask {
+Function Enable-OZOScheduledTask {
     <#
         .SYNOPSIS
         See description.
@@ -415,8 +438,11 @@ Function Enable-OZOScheduledtask {
     )
     # Get the task
     [PSCustomObject] $ozoGetScheduledTask = (Get-OZOScheduledTask -TaskName $TaskName)
-    # Call EnableTask to enable the task
-    $ozoGetScheduledTask.EnableTask()
+    # Determine if the task is not null
+    If ($null -ne $ozoGetScheduledTask -And $null -ne $ozoGetScheduledTask.Task) {
+        # Task is not null; call EnableTask to enable the task
+        $ozoGetScheduledTask.EnableTask()
+    }
 }
 # Export-OZOScheduledTask function
 Function Export-OZOScheduledTask {
@@ -441,8 +467,11 @@ Function Export-OZOScheduledTask {
     )
     # Get the task
     [PSCustomObject] $ozoGetScheduledTask = (Get-OZOScheduledTask -TaskName $TaskName)
-    # Export all properties except Compatibilities as Json to a file
-    $ozoGetScheduledTask | Select-Object -ExcludeProperty Compatibilities | ConvertTo-Json | Out-File -Path $OutFile
+    # Determine if the task is not null
+    If ($null -ne $ozoGetScheduledTask -And $null -ne $ozoGetScheduledTask.Task) {
+        # Task is not null; export all properties except Compatibilities as Json to a file
+        $ozoGetScheduledTask | Select-Object -ExcludeProperty Compatibilities | ConvertTo-Json | Out-File -Path $OutFile
+    }
 }
 # Get-OZOScheduledTask function
 Function Get-OZOScheduledTask {
@@ -458,6 +487,10 @@ Function Get-OZOScheduledTask {
         .LINK
         https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Get-OZOScheduledTask.md
     #>
+    # Parameters
+    [CmdLetBinding()] Param (
+        [Parameter(Mandatory=$true,HelpMessage="The task to get")][String] $TaskName
+    )
     # Return an OZOTask object
     $PSCmdlet.WriteObject(([OZOTask]::New($TaskName)))
 }
@@ -543,8 +576,11 @@ Function Remove-OZOScheduledTask {
     )
     # Get the task
     [PSCustomObject] $ozoGetScheduledTask = (Get-OZOScheduledTask -TaskName $TaskName)
-    # Call RemoveTask to disable and remove the task
-    $ozoGetScheduledTask.RemoveTask()
+    # Determine if the task is not null
+    If ($null -ne $ozoGetScheduledTask -And $null -ne $ozoGetScheduledTask.Task) {
+        # Task is not null; call RemoveTask to disable and remove the task
+        $ozoGetScheduledTask.RemoveTask()
+    }
 }
 
 Export-ModuleMember -Function `

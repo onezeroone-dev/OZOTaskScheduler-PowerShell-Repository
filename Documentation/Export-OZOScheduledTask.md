@@ -21,6 +21,6 @@ Export-OZOScheduledTask
 |`TaskName`|The name of the task to export.|
 
 ## Examples
-`````powershell
+```powershell
 Export-OZOScheduledTask -OutFile "C:\Temp\update-ozo-powershell-module-task.json" -TaskName "Update OZO PowerShell Module"
-`````
+```

@@ -19,6 +19,6 @@ Enable-OZOScheduledTask
 |`TaskName`|The name of the task to enable.|
 
 ## Examples
-`````powershell
+```powershell
 Enable-OZOScheduledTask -TaskName "Update OZO PowerShell Module"
-`````
+```

@@ -19,6 +19,6 @@ Get-OZOScheduledTask
 |`TaskName`|The name of the task to get.|
 
 ## Examples
-`````powershell
+```powershell
 $ozoGetScheduledTask = (Get-OZOScheduledTask -TaskName "Update OZO PowerShell Module")
-`````
+```

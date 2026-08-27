@@ -1,17 +1,17 @@
-# OZOTaskScheduler PowerShell Module Installation and Usage
+# OZOTaskScheduler PowerShell Module
 
 ## Description
-Provides functions for managing Windows Task Scheduler tasks.
+OZOTaskScheduler provides a lightweight PowerShell interface for managing Windows Task Scheduler tasks. It is designed to create, update, enable, disable, export, and remove scheduled tasks using simple function calls and JSON task definitions.
 
 ## Installation
-This module is published to Microsoft's [PowerShell Gallery](https://learn.microsoft.com/en-us/powershell/scripting/gallery/overview?view=powershell-5.1). Ensure your system is configured for this repository then execute the following in an _Administrator_ PowerShell:
+This module is published to Microsoft's [PowerShell Gallery](https://learn.microsoft.com/en-us/powershell/scripting/gallery/overview?view=powershell-5.1). Run the following command in an _Administrator_ PowerShell session:
 
 ```powershell
 Install-Module OZOTaskScheduler
 ```
 
 ## Usage
-Import this module in your script or console to make the functions available for use:
+Import the module in your script or console:
 
 ```powershell
 Import-Module OZOTaskScheduler
@@ -27,12 +27,12 @@ Import-Module OZOTaskScheduler
 - [Remove-OZOScheduledTask](Documentation/Remove-OZOScheduledTask.md)
 
 ## Classes
-- [OZOSchedule](Documentation/OZOSchedule.md)
+- [OZOJsonTask](Documentation/OZOJsonTask.md)
 - [OZOTask](Documentation/OZOTask.md)
-- [OZOScheduledTasks](Documentation/OZOScheduledTasks.md)
+- [OZOSchedule](Documentation/OZOSchedule.md)
 
 ## Logging
-When available, messages are written to the [_One Zero One_ event provider](https://github.com/onezeroone-dev/OZOLogger-PowerShell-Module/blob/main/README.md). Otherwise, events are written to the _Microsoft-Windows-PowerShell_ provider as _Information_ events using event ID *4100*.
+When available, messages are written to the [_One Zero One_ event provider](https://github.com/onezeroone-dev/OZOLogger-PowerShell-Module/blob/main/README.md). Otherwise, events are written to the _Microsoft-Windows-PowerShell_ provider as _Information_ events with event ID *4100*.
 
 ## License
 This module is licensed under the [GNU General Public License (GPL) version 2.0](LICENSE).
