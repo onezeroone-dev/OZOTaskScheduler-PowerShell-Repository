@@ -54,8 +54,11 @@ Tasks are expressed as a JSON dictionary. The following example shows a _Schedul
             "RandomDelay":0
         }
     ],
-    "Once":false,
-    "OnceDateTime":{},
+    "Once":true,
+    "OnceDateTime":{
+        "DateTime":"2026-09-01T09:00:00",
+        "RandomDelay":0
+    },
     "AtReboot":false,
     "AtLogon":false
 }

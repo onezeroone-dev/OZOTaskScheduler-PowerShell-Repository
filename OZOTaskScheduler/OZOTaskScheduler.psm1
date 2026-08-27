@@ -95,9 +95,9 @@ Class OZOTask {
     [Boolean] $AtLogon   = $false
     # PROPERTIES: PSCustomObjects
     Hidden [PSCustomObject] $ozoLogger = $null
-    Hidden [OZOOnceDateTime] $OnceDateTime = $null
+    Hidden [PSCustomObject] $OnceDateTime = $null
     # PROPERTIES: PSCustomObject Lists
-    [System.Collections.Generic.List[PSCustomObject]] $Schedules = @()
+    Hidden [System.Collections.Generic.List[PSCustomObject]] $Schedules = @()
     [System.Collections.Generic.List[PSCustomObject]] $OZOSchedules = @()
     # PROPERTIES: Strings
     [String] $Name          = $null
@@ -121,7 +121,7 @@ Class OZOTask {
         }
     }
     # METHODS: Constructor method - full
-    OZOTask([String]$Name,[String]$Script,[String]$Parameters,[String]$Compatibility,[String]$Directory,[String]$User,[Boolean]$Disabled,[Boolean]$Scheduled,[System.Collections.Generic.List[PSCustomObject]]$Schedules,[Boolean]$Once,[OZOOnceDateTime]$OnceDateTime,[Boolean]$AtReboot,[Boolean]$AtLogon) {
+    OZOTask([String]$Name,[String]$Script,[String]$Parameters,[String]$Compatibility,[String]$Directory,[String]$User,[Boolean]$Disabled,[Boolean]$Scheduled,[System.Collections.Generic.List[PSCustomObject]]$Schedules,[Boolean]$Once,[PSCustomObject]$OnceDateTime,[Boolean]$AtReboot,[Boolean]$AtLogon) {
         # Set Properties
         $this.Name          = $Name
         $this.Script        = $Script
@@ -144,8 +144,8 @@ Class OZOTask {
         }
         # Iterate over once date times
         If ($this.Once -eq $true) {
-            # Instantiate an OZOOnceDateTime object and store it as OnceDateTime
-            $this.OnceDateTime = ([OZOOnceDateTime]::new($OnceDateTime))
+            # Set OnceDateTime
+            $this.OnceDateTime = $OnceDateTime
         }
     }
     # METHODS: Validation method
@@ -183,8 +183,8 @@ Class OZOTask {
                 $this.ozoLogger.Write(($this.Name + "Scheduled is enabled but no valid schedules were found."),"Error")
                 $Return = $false
             }
-            # Determine if Once is true and OnceDateTime is not valid
-            If ($this.Once -eq $true -And $this.OnceDateTime.Valid -eq $false) {
+            # Determine if Once is true and OnceDateTime is not null and OnceDateTime is not valid
+            If ($this.Once -eq $true -And $null -ne $this.OnceDateTime -And $this.OnceDateTime.Valid -eq $false) {
                 # Once is true and OnceDateTime is not valid
                 $this.ozoLogger.Write(($this.Name + "Once is enabled but OnceDateTime is not valid."),"Error")
                 $Return = $false
