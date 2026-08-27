@@ -1,0 +1,12 @@
+{
+    "Name":"Example AtLogon Task",
+    "Script":"C:\\Temp\\logonScript.ps1",
+    "Parameters":"",
+    "Compatibility":"Win8",
+    "Directory":"C:\\Temp",
+    "Disabled":true,
+    "Scheduled":false,
+    "Schedules":[],
+    "AtReboot":false,
+    "AtLogon":true
+}
