@@ -18,22 +18,22 @@ Creates a new instance for an existing task lookup or a task that will be manage
 
 **Full Constructor**
 ```
-OZOTask($Name:String, $Script:String, $Parameters:String, $Compatibility:String, $Directory:String, $User:String, $Disabled:Boolean, $Scheduled:Boolean, $Schedules:System.Collections.Generic.List[System.Collections.IEnumerable], $Once:Boolean, $OnceDateTime:PSCustomObject, $AtReboot:Boolean, $AtLogon:Boolean)
+OZOTask($Name:String, $Script:String, $Parameters:String, $Directory:String, $Disabled:Boolean, $Settings:PSCustomObject, $User:String, $AtLogon:Boolean, $AtReboot:Boolean, $Once:Boolean, $OnceDateTime:PSCustomObject, $Scheduled:Boolean, $Schedules:System.Collections.Generic.List[System.Collections.IEnumerable])
 ```
 Creates a new instance for task creation or update operations.
 - `$Name`: The name of the task
 - `$Script`: The absolute path to the script or executable to run
 - `$Parameters`: Optional parameters to pass to the script or program
-- `$Compatibility`: Task scheduler compatibility mode
 - `$Directory`: The working directory for the task
-- `$User`: The account that the task should run as
 - `$Disabled`: Indicates whether the task should be disabled when created
-- `$Scheduled`: Indicates whether the task uses scheduled triggers
-- `$Schedules`: The JSON schedule definitions to convert into `OZOSchedule` objects
+- `$Settings`: The task settings dictionary; currently contains `Compatibility`
+- `$User`: The account that the task should run as
+- `$AtLogon`: Indicates whether the task should run at logon
+- `$AtReboot`: Indicates whether the task should run at startup/reboot
 - `$Once`: Indicates whether the task has a one-time date/time trigger
 - `$OnceDateTime`: The one-time date/time trigger definition
-- `$AtReboot`: Indicates whether the task should run at startup/reboot
-- `$AtLogon`: Indicates whether the task should run at logon
+- `$Scheduled`: Indicates whether the task uses scheduled triggers
+- `$Schedules`: The JSON schedule definitions to convert into `OZOSchedule` objects
 
 ## Properties
 Public properties:
@@ -46,11 +46,10 @@ Public properties:
 - `$Name`: Name of the task
 - `$Script`: Path to the script or binary to run
 - `$Parameters`: Parameters passed to the task action
-- `$Compatibility`: Task scheduler compatibility mode
 - `$Directory`: Working directory for the task action
 - `$User`: Account associated with the task
 
-`$ozoLogger`, `$Compatibilities`, and `$OnceDateTime` are hidden internal properties used for logging, compatibility validation, and one-time trigger configuration.
+`$ozoLogger`, `$Compatibilities`, `$OnceDateTime`, and `$Settings` are hidden internal properties used for logging, compatibility validation, one-time trigger configuration, and Task Scheduler settings.
 
 ## Methods
 - **Validates()**
