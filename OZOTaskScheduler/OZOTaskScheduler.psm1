@@ -171,6 +171,29 @@ Class OZOTask {
                     $Return = $false
                 }
             }
+            # Determine if Scheduled is set and there are no valid schedules
+            If ($this.Scheduled -eq $true -And ($this.Schedules | Where-Object {$_.Valid -eq $true}).Count -eq 0) {
+                # Scheduled is set and there are no valid schedules
+                $this.ozoLogger.Write(($this.Name + "Scheduled is enabled but no valid schedules were found."),"Error")
+                $Return = $false
+            }
+            # Determine if Once is set and OnceDateTime is not valid
+            If ($this.Once -eq $true -And $this.OnceDateTime.Valid -eq $false) {
+                # Once is set and OnceDateTime is not valid
+                $this.ozoLogger.Write(($this.Name + "Once is enabled but OnceDateTime is not valid."),"Error")
+                $Return = $false
+            }
+            # Determine if no triggers are set
+            If ($this.AtLogon -eq $false -And $this.Scheduled -eq $false -And $this.Once -eq $false -And $this.AtReboot -eq $false) {
+                # No triggers are set
+                $this.ozoLogger.Write(($this.Name + "No triggers are set."),"Error")
+                $Return = $false
+            }
+            # Determine if AtLogon is set and any other trigger is set
+            If ($this.AtLogon -eq $true -And ($this.Scheduled -eq $true -Or $this.Once -eq $true -Or $this.AtReboot -eq $true)) {
+                # AtLogon is set and any other trigger is set
+                $this.ozoLogger.Write(($this.Name + "AtLogon is enabled but other triggers are also set. AtLogon will be ignored."),"Warning")
+            }
             # Determine if Compatibility is not found in Compatibilities
             If ($this.Compatibilities -NotContains $this.Compatibility) {
                 # Compatibility is not found in Compatibilities
@@ -213,26 +236,28 @@ Class OZOTask {
         [System.Collections.Generic.List[Microsoft.Management.Infrastructure.CimInstance]] $Triggers = @()
         # Determine if the task does not exist and is valid
         If ($this.Exists() -eq $false -And $this.Validates() -eq $true) {
-            # Determine if AtLogon is false and Scheduled is true and at least one schedule is valid
-            If ($this.AtLogon -eq $false -And $this.Scheduled -eq $true -And ($this.Schedules | Where-Object {$_.Valid -eq $true}).Count -gt 0) {
-                # AtLogon is false, Schedules is not null, and there is at least one valid schedule; iterate over the valid schedules and create triggers
-                ForEach ($Schedule in ($this.Schedules | Where-Object {$_.Valid -eq $true})) {
-                    # Create a weekly trigger for each schedule and add the trigger to the list of triggers
-                    $Triggers.Add((New-ScheduledTaskTrigger -Weekly -DaysOfWeek $Schedule.Weekday -At $Schedule.StartTime -RandomDelay (New-TimeSpan -Start [DateTime]$Schedule.StartTime -End ([DateTime]($Schedule.StartTime).AddSeconds($Schedule.RandomDelay)))))
+            # Determineone of Scheduled, Once, or AtReboot is true
+            If ($this.Scheduled -eq $true -Or $this.Once -eq $true -Or $this.AtReboot -eq $true) {
+                # AtLogon is false and one of Scheduled, Once, or AtReboot is true; determine if scheduled is true and at least one schedule is valid
+                If ($this.Scheduled -eq $true -And ($this.Schedules | Where-Object {$_.Valid -eq $true}).Count -gt 0) {
+                    # Schedules is not null and there is at least one valid schedule; iterate over the valid schedules and create triggers
+                    ForEach ($Schedule in ($this.Schedules | Where-Object {$_.Valid -eq $true})) {
+                        # Create a weekly trigger for each schedule and add the trigger to the list of triggers
+                        $Triggers.Add((New-ScheduledTaskTrigger -Weekly -DaysOfWeek $Schedule.Weekday -At $Schedule.StartTime -RandomDelay (New-TimeSpan -Start [DateTime]$Schedule.StartTime -End ([DateTime]($Schedule.StartTime).AddSeconds($Schedule.RandomDelay)))))
+                    }
                 }
-            }
-            # Determine if AtLogon is false and Once is true and OnceDateTime is valid
-            If ($this.AtLogon -eq $false -And $this.Once -eq $true -And $this.OnceDateTime.Valid -eq $true) {
-                # AtLogon is false, Once is true, and OnceDateTime is valid; create a one-time trigger and add it to the list of triggers
-                $Triggers.Add((New-ScheduledTaskTrigger -Once -At $this.OnceDateTime.DateTime -RandomDelay (New-TimeSpan -Start [DateTime]$this.OnceDateTime.DateTime -End ([DateTime]($this.OnceDateTime.DateTime).AddSeconds($this.OnceDateTime.RandomDelay)))))
-            }
-            # Determine if AtLogon is false and AtReboot is true
-            If ($this.AtLogon -eq $false -And $this.AtReboot -eq $true) {
-                # AtLogon is false and AtReboot is true; create a boot trigger and it to the list of triggers
-                $Triggers.Add((New-ScheduledTaskTrigger -AtStartup))
-            }
-            # Determine if AtLogon is set true Scheduled is false and AtReboot is false
-            If ($this.AtLogon -eq $true -And $this.Scheduled -eq $false -And $this.AtReboot -eq $false) {
+                # Determine Once is true and OnceDateTime is valid
+                If ($this.Once -eq $true -And $this.OnceDateTime.Valid -eq $true) {
+                    # nce is true, and OnceDateTime is valid; create a one-time trigger and add it to the list of triggers
+                    $Triggers.Add((New-ScheduledTaskTrigger -Once -At $this.OnceDateTime.DateTime -RandomDelay (New-TimeSpan -Start [DateTime]$this.OnceDateTime.DateTime -End ([DateTime]($this.OnceDateTime.DateTime).AddSeconds($this.OnceDateTime.RandomDelay)))))
+                }
+                # Determine AtReboot is true
+                If ($this.AtLogon -eq $false -And $this.AtReboot -eq $true) {
+                    # AtLogon is false and AtReboot is true; create a boot trigger and it to the list of triggers
+                    $Triggers.Add((New-ScheduledTaskTrigger -AtStartup))
+                }
+            # ElseIf determine if AtLogon is true and all of Scheduled, Once, and AtReboot are false
+            } ElseIf ($this.AtLogon -eq $true -And $this.Scheduled -eq $false -And $this.Once -eq $false -And $this.AtReboot -eq $false) {
                 # AtLogon is true, Scheduled is false, and AtReboot is false; create a logon trigger and a it to the list of triggers
                 $Triggers.Add((New-ScheduledTaskTrigger -AtLogOn))
             }
