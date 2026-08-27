@@ -98,13 +98,13 @@ Class OZOTask {
     Hidden [OZOOnceDateTime] $OnceDateTime = $null
     # PROPERTIES: PSCustomObjects
     Hidden [PSCustomObject] $ozoLogger = $null
+    Hidden [PSCustomObject] $Settings  = $null
     # PROPERTIES: OZOSchedule Lists
     [System.Collections.Generic.List[OZOSchedule]] $OZOSchedules = @()
     # PROPERTIES: Strings
     [String] $Name          = $null
     [String] $Script        = $null
     [String] $Parameters    = $null
-    [String] $Compatibility = $null
     [String] $Directory     = $null
     [String] $User          = $null
     # PROPERTIES: String Lists
@@ -122,19 +122,19 @@ Class OZOTask {
         }
     }
     # METHODS: Constructor method - full
-    OZOTask([String]$Name,[String]$Script,[String]$Parameters,[String]$Compatibility,[String]$Directory,[String]$User,[Boolean]$Disabled,[Boolean]$Scheduled,[System.Collections.Generic.List[System.Collections.IEnumerable]]$Schedules,[Boolean]$Once,[PSCustomObject]$OnceDateTime,[Boolean]$AtReboot,[Boolean]$AtLogon) {
+    OZOTask([String]$Name,[String]$Script,[String]$Parameters,[String]$Directory,[Boolean]$Disabled,[PSCustomObject]$Settings,[String]$User,[Boolean]$AtLogon,[Boolean]$AtReboot,[Boolean]$Once,[PSCustomObject]$OnceDateTime,[Boolean]$Scheduled,[System.Collections.Generic.List[System.Collections.IEnumerable]]$Schedules) {
         # Set Properties
-        $this.Name          = $Name
-        $this.Script        = $Script
-        $this.Parameters    = $Parameters
-        $this.Compatibility = $Compatibility
-        $this.Directory     = $Directory
-        $this.User          = $User
-        $this.Disabled      = $Disabled
-        $this.Scheduled     = $Scheduled
-        $this.Once          = $Once
-        $this.AtReboot      = $AtReboot
-        $this.AtLogon       = $AtLogon
+        $this.Name       = $Name
+        $this.Script     = $Script
+        $this.Parameters = $Parameters
+        $this.Directory  = $Directory
+        $this.Disabled   = $Disabled
+        $this.Settings   = $Settings
+        $this.User       = $User
+        $this.AtLogon    = $AtLogon
+        $this.AtReboot   = $AtReboot
+        $this.Once       = $Once
+        $this.Scheduled  = $Scheduled       
         # Create a logger object
         $this.ozoLogger = (New-OZOLogger)
         # Iterate over schedules
@@ -268,7 +268,7 @@ Class OZOTask {
                 # Disabled is set; set parameters for New-ScheduledTaskSettingsSet with the Disabled parameter
                 $settingsParameters = @{
                     RunOnlyIfNetworkAvailable = $true
-                    Compatibility             = $this.Compatibility
+                    Compatibility             = $this.Settings.Compatibility
                     StartWhenAvailable        = $true
                     Disable                   = $true
                 }
@@ -276,7 +276,7 @@ Class OZOTask {
                 # Disabled is not set; set parameters for New-ScheduledTaskSettingsSet without the Disabled parameter
                 $settingsParameters = @{
                     RunOnlyIfNetworkAvailable = $true
-                    Compatibility             = $this.Compatibility
+                    Compatibility             = $this.Settings.Compatibility
                     StartWhenAvailable        = $true
                 }
             }
@@ -412,16 +412,16 @@ Class OZOJsonTask {
                     $this.Json.Name,
                     $this.Json.Script,
                     $this.Json.Parameters,
-                    $this.Json.Compatibility,
                     $this.Json.Directory,
-                    "SYSTEM",
                     $this.Json.Disabled,
-                    $this.Json.Scheduled,
-                    $this.Json.Schedules,
+                    $this.Json.Settings,
+                    "SYSTEM",
+                    $this.Json.AtLogon,
+                    $this.Json.AtReboot,
                     $this.Json.Once,
                     $this.Json.OnceDateTime,
-                    $this.Json.AtReboot,
-                    $this.Json.AtLogon
+                    $this.Json.Scheduled,
+                    $this.Json.Schedules
                 )
             }
         }
@@ -588,9 +588,9 @@ Function New-OZOScheduledTask {
         .PARAMETER JsonString
         A compressed JSON string that defines a task to schedule.
         .EXAMPLE
-        New-OZOScheduledTask -JsonFile "C:\Temp\scheduledTasks-example.json"
+        New-OZOScheduledTask -JsonFile "C:\Temp\OZOTaskScheduler-ScheduledTask-Example.json"
         .EXAMPLE
-        New-OZOScheduledTask -JsonString '[{"Name":"Example Scheduled Task","Script":"C:\\Temp\\example.ps1","Parameters":"","Compatibility":"Win8","Directory":"C:\\Temp","Disabled":true,"Scheduled":true,"Schedules":["@{WeekDay=Monday; StartTime=8:00 AM; RandomDelay=0}","@{WeekDay=Wednesday; StartTime=8:00 AM; RandomDelay=0}","@{WeekDay=Friday; StartTime=8:00 AM; RandomDelay=0}"],"AtReboot":false,"AtLogon":false},{"Name":"Example Logon Task","Script":"C:\\Temp\\logonScript.ps1","Parameters":"","Compatibility":"Win8","Directory":"C:\\Temp","Disabled":true,"Scheduled":false,"Schedules":[],"AtReboot":false,"AtLogon":false}]'
+        New-OZOScheduledTask -JsonString '{"Name":"Example Scheduled Task","Script":"C:\\Temp\\OZOTaskScheduler-ScheduledTask-Example.json","Parameters":"","Directory":"C:\\Temp","Disabled":true,"Settings":{"Compatibility":"Win8"},"AtLogon":false,"AtReboot":true,"Once":true,"OnceDateTime":{"DateTime":"2026-09-01T09:00:00","RandomDelay":0},"Scheduled":true,"Schedules":[{"WeekDay":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Friday","StartTime":"8:00 AM","RandomDelay":0}]}'
         .LINK
         https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/New-OZOScheduledTask.md
     #>
@@ -619,9 +619,9 @@ Function Set-OZOScheduledTask {
         .PARAMETER JsonString
         A compressed JSON string that defines a task to schedule
         .EXAMPLE
-        Set-OZOScheduledTask -JsonFile "C:\Temp\scheduledTasks-example.json"
+        Set-OZOScheduledTask -JsonFile "C:\Temp\OZOTaskScheduler-ScheduledTask-Example.json"
         .EXAMPLE
-        Set-OZOScheduledTask -JsonString '[{"Name":"Example Scheduled Task","Script":"C:\\Temp\\example.ps1","Parameters":"","Compatibility":"Win8","Directory":"C:\\Temp","Disabled":true,"Scheduled":true,"Schedules":["@{WeekDay=Monday; StartTime=8:00 AM; RandomDelay=0}","@{WeekDay=Wednesday; StartTime=8:00 AM; RandomDelay=0}","@{WeekDay=Friday; StartTime=8:00 AM; RandomDelay=0}"],"AtReboot":false,"AtLogon":false},{"Name":"Example Logon Task","Script":"C:\\Temp\\logonScript.ps1","Parameters":"","Compatibility":"Win8","Directory":"C:\\Temp","Disabled":true,"Scheduled":false,"Schedules":[],"AtReboot":false,"AtLogon":false}]'
+        Set-OZOScheduledTask -JsonString '{"Name":"Example Scheduled Task","Script":"C:\\Temp\\OZOTaskScheduler-ScheduledTask-Example.json","Parameters":"","Directory":"C:\\Temp","Disabled":true,"Settings":{"Compatibility":"Win8"},"AtLogon":false,"AtReboot":true,"Once":true,"OnceDateTime":{"DateTime":"2026-09-01T09:00:00","RandomDelay":0},"Scheduled":true,"Schedules":[{"WeekDay":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Friday","StartTime":"8:00 AM","RandomDelay":0}]}'
         .LINK
         https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Set-OZOScheduledTask.md
     #>

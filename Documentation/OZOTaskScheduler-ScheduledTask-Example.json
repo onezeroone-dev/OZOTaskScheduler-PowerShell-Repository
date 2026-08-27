@@ -1,16 +1,26 @@
 {
     "Name":"Example Scheduled Task",
-    "Script":"C:\\Temp\\example.ps1",
+    "Script":"C:\\Temp\\OZOTaskScheduler-ScheduledTask-Example.json",
     "Parameters":"",
-    "Compatibility":"Win8",
     "Directory":"C:\\Temp",
     "Disabled":true,
+    "Settings":{
+        "Compatibility":"Win8"
+    },
+    "AtLogon":false,
+    "AtReboot":true,
+    "Once":true,
+    "OnceDateTime":{
+        "DateTime":"2026-09-01T09:00:00",
+        "RandomDelay":0
+    },
     "Scheduled":true,
     "Schedules":[
         {
             "WeekDay":"Monday",
             "StartTime":"8:00 AM",
-            "RandomDelay":0        },
+            "RandomDelay":0
+        },
         {
             "WeekDay":"Wednesday",
             "StartTime":"8:00 AM",
@@ -21,12 +31,5 @@
             "StartTime":"8:00 AM",
             "RandomDelay":0
         }
-    ],
-    "Once":true,
-    "OnceDateTime":{
-        "DateTime":"2026-09-01T09:00:00",
-        "RandomDelay":0
-    },
-    "AtReboot":true,
-    "AtLogon":false
+    ]
 }
