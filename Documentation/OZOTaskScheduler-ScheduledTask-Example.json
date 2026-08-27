@@ -1,6 +1,6 @@
 {
     "Name":"Example Scheduled Task",
-    "Script":"C:\\Temp\\OZOTaskScheduler-ScheduledTask-Example.json",
+    "Script":"C:\\Temp\\OZOTaskScheduler-ScheduledTask-Example.ps1",
     "Parameters":"",
     "Directory":"C:\\Temp",
     "Disabled":true,
