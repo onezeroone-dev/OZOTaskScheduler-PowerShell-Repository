@@ -244,17 +244,21 @@ Class OZOTask {
         # Get the existing task definition
         Try {
             $ScheduledTask = Get-ScheduledTask -TaskName $this.Name -ErrorAction Stop
+            # Success
         } Catch {
+            # Failure
             $this.ozoLogger.Write(("Failed to get the " + $this.Name + " task with error " + $_ + "."), "Error")
             return
         }
-        # Populate task settings and principal information
+        # Populate Disabled
         $this.Disabled = -Not [Boolean]$ScheduledTask.Settings.Enabled
+        # Populate Settings
         $this.Settings = [PSCustomObject]@{
             Compatibility = [String]$ScheduledTask.Settings.Compatibility
         }
-        $this.User = [String]$ScheduledTask.Principal.UserId
-        # Populate the supported action formats created by this module
+        # Populate User
+        #$this.User = [String]$ScheduledTask.Principal.UserId
+        # Populate Actions (including Directory, Script, and Parameters)
         $Action = $ScheduledTask.Actions | Select-Object -First 1
         If ($null -ne $Action) {
             $this.Directory = [String]$Action.WorkingDirectory
@@ -285,15 +289,23 @@ Class OZOTask {
         $this.OnceDateTime = $null
         $this.Scheduled = $false
         $this.OZOSchedules.Clear()
+        # Iterate over the triggers and map to properties
         ForEach ($Trigger in $ScheduledTask.Triggers) {
+            # Set default RandomDelay to 0
             $RandomDelay = 0
+            # Determine if the trigger has a RandomDelay property and it is not null or empty
             If ([String]::IsNullOrEmpty([String]$Trigger.RandomDelay) -eq $false) {
+                # Trigger has a RandomDelay property and it is not null or empty; convert to seconds
                 $RandomDelay = [Int32][System.Xml.XmlConvert]::ToTimeSpan([String]$Trigger.RandomDelay).TotalSeconds
             }
+            # Switch on the trigger's CimClassName to map to properties
             Switch ($Trigger.CimClass.CimClassName) {
                 'MSFT_TaskWeeklyTrigger' {
+                    # Trigger is MSFT_TaskWeeklyTrigger; set Scheduled to true
                     $this.Scheduled = $true
+                    # Determine the StartTime for the trigger
                     $StartTime = ([DateTime]$Trigger.StartBoundary).ToString("h:mm tt")
+                    # Define a list of weekdays with their corresponding values for bitwise comparison
                     $Weekdays = @(
                         [PSCustomObject]@{ Name = "Sunday"; Value = 1 },
                         [PSCustomObject]@{ Name = "Monday"; Value = 2 },
@@ -303,8 +315,11 @@ Class OZOTask {
                         [PSCustomObject]@{ Name = "Friday"; Value = 32 },
                         [PSCustomObject]@{ Name = "Saturday"; Value = 64 }
                     )
+                    # Iterate on Weekdays
                     ForEach ($Weekday in $Weekdays) {
+                        # Determine if the current weekday is included in the trigger's DaysOfWeek using bitwise AND
                         If (([Int32]$Trigger.DaysOfWeek -band $Weekday.Value) -ne 0) {
+                            # Current weekday is included in the trigger's DaysOfWeek; create an OZOSchedule object and add it to the OZOSchedules list
                             $this.OZOSchedules.Add([OZOSchedule]::new([PSCustomObject]@{
                                 WeekDay = $Weekday.Name
                                 StartTime = $StartTime
@@ -312,22 +327,36 @@ Class OZOTask {
                             }))
                         }
                     }
+                    # Break
+                    break
                 }
                 'MSFT_TaskTimeTrigger' {
+                    # Trigger is MSFT_TaskTimeTrigger; set Once to true
                     $this.Once = $true
+                    # Create an OZOOnceDateTime object and set it to OnceDateTime
                     $this.OnceDateTime = [OZOOnceDateTime]::new([PSCustomObject]@{
                         DateTime = ([DateTime]$Trigger.StartBoundary).ToString("o")
                         RandomDelay = $RandomDelay
                     })
+                    # Break
+                    break
                 }
                 'MSFT_TaskBootTrigger' {
+                    # Trigger is MSFT_TaskBootTrigger; set AtReboot to true
                     $this.AtReboot = $true
+                    # Break
+                    break
                 }
                 'MSFT_TaskLogonTrigger' {
+                    # Trigger is MSFT_TaskLogonTrigger; set AtLogon to true
                     $this.AtLogon = $true
+                    # Break
+                    break
                 }
                 Default {
                     $this.ozoLogger.Write(($this.Name + " uses an unsupported trigger type: " + $Trigger.CimClass.CimClassName + "."), "Warning")
+                    # Break
+                    break
                 }
             }
         }
