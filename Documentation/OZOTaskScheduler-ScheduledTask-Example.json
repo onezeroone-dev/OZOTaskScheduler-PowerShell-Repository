@@ -22,9 +22,9 @@
             "RandomDelay":0
         }
     ],
-    "Once":false,
+    "Once":true,
     "OnceDateTime":{
-        "StartTime":"2026-09-01T09:00:00",
+        "DateTime":"2026-09-01T09:00:00",
         "RandomDelay":0
     },
     "AtReboot":true,

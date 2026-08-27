@@ -1,6 +1,41 @@
 #Requires -RunAsAdministrator
 
 # CLASSES
+# OZOOnce class
+Class OZOOnceDateTime {
+    # PROPERTIES: Booleans
+    [Boolean] $Valid = $false
+    # PROPERTIES: Int32s
+    [Int32] $RandomDelay    = 0
+    [Int32] $RandomDelayMax = 3600
+    # PROPERTIES: Strings
+    [String] $DateTime = $null
+    # METHODS: Constructor method
+    OZOOnceDateTime($OnceDateTime) {
+        # Set properties
+        $this.RandomDelay = $OnceDateTime.RandomDelay
+        $this.DateTime    = $OnceDateTime.DateTime
+        # Call validates to set valid
+        $this.Valid = $this.Validates()
+    }
+    # METHODS: Validates method
+    [Boolean] Validates() {
+        # Control variable
+        [Boolean] $Return = $true
+        # Determine if RandomDelay is outside of range
+        If ($this.RandomDelay -lt 0 -Or $this.RandomDelay -gt $this.RandomDelayMax) {
+            # RandomDelay is outside of range
+            $Return = $false
+        }
+        # Determine if DateTime cannot be expressed as a DateTime
+        If ([Boolean]($this.DateTime -As [DateTime]) -eq $false) {
+            # DateTime cannot be expressed as a DateTime
+            $Return = $false
+        }
+        # Return
+        return $Return
+    }
+}
 # OZOSchedule class
 Class OZOSchedule {
     # PROPERTIES: Booleans
@@ -50,12 +85,14 @@ Class OZOTask {
     # PROPERTIES: Booleans
     [Boolean] $Disabled  = $false
     [Boolean] $Scheduled = $false
+    [Boolean] $Once      = $false
     [Boolean] $AtReboot  = $false
     [Boolean] $AtLogon   = $false
     # PROPERTIES: PSCustomObjects
     Hidden [PSCustomObject] $ozoLogger = $null
+    Hidden [OZOOnceDateTime] $OnceDateTime = $null
     # PROPERTIES: PSCustomObject Lists
-    [System.Collections.Generic.List[PSCustomObject]] $Schedules = @()
+    [System.Collections.Generic.List[OZOSchedule]] $Schedules = @()
     # PROPERTIES: Strings
     [String] $Name          = $null
     [String] $Script        = $null
@@ -78,7 +115,7 @@ Class OZOTask {
         }
     }
     # METHODS: Constructor method - full
-    OZOTask([String]$Name,[String]$Script,[String]$Parameters,[String]$Compatibility,[String]$Directory,[String]$User,[Boolean]$Disabled,[Boolean]$Scheduled,[System.Collections.Generic.List[PSCustomObject]]$Schedules,[Boolean]$AtReboot,[Boolean]$AtLogon) {
+    OZOTask([String]$Name,[String]$Script,[String]$Parameters,[String]$Compatibility,[String]$Directory,[String]$User,[Boolean]$Disabled,[Boolean]$Scheduled,[System.Collections.Generic.List[OZOSchedule]]$Schedules,[Boolean]$Once,[OZOOnceDateTime]$OnceDateTime,[Boolean]$AtReboot,[Boolean]$AtLogon) {
         # Set Properties
         $this.Name          = $Name
         $this.Script        = $Script
@@ -89,6 +126,7 @@ Class OZOTask {
         $this.Disabled      = $Disabled
         $this.Scheduled     = $Scheduled
         $this.Schedules     = $Schedules
+        $this.Once          = $Once
         $this.AtReboot      = $AtReboot
         $this.AtLogon       = $AtLogon
         # Create a logger object
@@ -97,6 +135,11 @@ Class OZOTask {
         ForEach ($Schedule in $Schedules) {
             # Instantiate an OZOSchedule object and add it to the schedules list
             $this.Schedules.Add(([OZOSchedule]::new($Schedule)))
+        }
+        # Iterate over once date times
+        If ($this.Once -eq $true) {
+            # Instantiate an OZOOnce object and add it to the once date times list
+            $this.OnceDateTime = ([OZOOnceDateTime]::new($OnceDateTime))
         }
     }
     # METHODS: Validation method
@@ -175,8 +218,13 @@ Class OZOTask {
                 # AtLogon is false, Schedules is not null, and there is at least one valid schedule; iterate over the valid schedules and create triggers
                 ForEach ($Schedule in ($this.Schedules | Where-Object {$_.Valid -eq $true})) {
                     # Create a weekly trigger for each schedule and add the trigger to the list of triggers
-                    $Triggers.Add((New-ScheduledTaskTrigger -Weekly -DaysOfWeek $Schedule.Weekday -At $Schedule.StartTime -RandomDelay $Schedule.RandomDelay))
+                    $Triggers.Add((New-ScheduledTaskTrigger -Weekly -DaysOfWeek $Schedule.Weekday -At $Schedule.StartTime -RandomDelay (New-TimeSpan -Start [DateTime]$Schedule.StartTime -End ([DateTime]($Schedule.StartTime).AddSeconds($Schedule.RandomDelay)))))
                 }
+            }
+            # Determine if AtLogon is false and Once is true and OnceDateTime is valid
+            If ($this.AtLogon -eq $false -And $this.Once -eq $true -And $this.OnceDateTime.Valid -eq $true) {
+                # AtLogon is false, Once is true, and OnceDateTime is valid; create a one-time trigger and add it to the list of triggers
+                $Triggers.Add((New-ScheduledTaskTrigger -Once -At $this.OnceDateTime.DateTime -RandomDelay (New-TimeSpan -Start [DateTime]$this.OnceDateTime.DateTime -End ([DateTime]($this.OnceDateTime.DateTime).AddSeconds($this.OnceDateTime.RandomDelay)))))
             }
             # Determine if AtLogon is false and AtReboot is true
             If ($this.AtLogon -eq $false -And $this.AtReboot -eq $true) {
@@ -337,6 +385,8 @@ Class OZOJsonTask {
                     $this.Json.Disabled,
                     $this.Json.Scheduled,
                     $this.Json.Schedules,
+                    $this.Json.Once,
+                    $this.Json.OnceDateTimes,
                     $this.Json.AtReboot,
                     $this.Json.AtLogon
                 )
