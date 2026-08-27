@@ -40,3 +40,30 @@ This module is licensed under the [GNU General Public License (GPL) version 2.0]
 
 ## Acknowledgements
 Special thanks to my employer, [Sonic Healthcare USA](https://sonichealthcareusa.com), who supports the growth of my PowerShell skillset and enables me to contribute portions of my work product to the PowerShell community.
+
+## Future Improvements
+The _Settings_ configuration will be expanded to include additional options:
+```json
+{
+    "Settings":{
+        "AllowDemandStart":true,
+        "AllowHardTerminate":true,
+        "AllowStartOnRemoteAppSession":true,
+        "AllowStartOnRemoteAppSessionOnly":false,
+        "Compatibility":"Win8",
+        "DeleteExpiredTaskAfter":"PT0S",
+        "DisallowStartIfOnBatteries":false,
+        "DontStopIfGoingOnBatteries":true,
+        "ExecutionTimeLimit":"PT0S",
+        "Hidden":false,
+        "IdleSettings":{
+            "StopOnIdleEnd":false,
+            "RestartOnIdle":false
+        },
+        "MultipleInstances":"IgnoreNew",
+        "Priority":"Normal",
+        "RunOnlyIfNetworkAvailable":false,
+        "WakeToRun":false
+    }
+}
+```
