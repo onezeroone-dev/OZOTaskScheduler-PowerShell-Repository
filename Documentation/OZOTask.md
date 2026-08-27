@@ -18,7 +18,7 @@ Creates a new instance for an existing task lookup or a task that will be manage
 
 **Full Constructor**
 ```
-OZOTask($Name:String, $Script:String, $Parameters:String, $Compatibility:String, $Directory:String, $User:String, $Disabled:Boolean, $Scheduled:Boolean, $Schedules:System.Collections.Generic.List[PSCustomObject], $AtReboot:Boolean, $AtLogon:Boolean)
+OZOTask($Name:String, $Script:String, $Parameters:String, $Compatibility:String, $Directory:String, $User:String, $Disabled:Boolean, $Scheduled:Boolean, $Schedules:System.Collections.Generic.List[System.Collections.IEnumerable], $Once:Boolean, $OnceDateTime:PSCustomObject, $AtReboot:Boolean, $AtLogon:Boolean)
 ```
 Creates a new instance for task creation or update operations.
 - `$Name`: The name of the scheduled task
@@ -29,7 +29,7 @@ Creates a new instance for task creation or update operations.
 - `$User`: The account that the task should run as
 - `$Disabled`: Indicates whether the task should be disabled when created
 - `$Scheduled`: Indicates whether the task uses scheduled triggers
-- `$Schedules`: A list of schedule definitions
+- `$Schedules`: The JSON schedule definitions to convert into `OZOSchedule` objects
 - `$Once`: Indicates whether the task has a one-time date/time trigger
 - `$OnceDateTime`: The one-time date/time trigger definition
 - `$AtReboot`: Indicates whether the task should run at startup/reboot
@@ -42,7 +42,7 @@ Public properties:
 - `$Once`: Boolean indicating whether the task has a one-time trigger
 - `$AtReboot`: Boolean indicating whether the task runs at startup
 - `$AtLogon`: Boolean indicating whether the task runs at logon
-- `$Schedules`: A list of schedule objects associated with the task
+- `$OZOSchedules`: A list of converted `OZOSchedule` objects associated with the task
 - `$Name`: Name of the task
 - `$Script`: Path to the script or binary to run
 - `$Parameters`: Parameters passed to the task action
