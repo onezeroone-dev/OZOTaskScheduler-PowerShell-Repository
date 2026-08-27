@@ -1,5 +1,5 @@
 ## OZOJsonTask
-This class is part of the [OZOTaskScheduler PowerShell Module](https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/README.md).
+This class is part of the [OZOTaskScheduler PowerShell Module](../README.md).
 
 ## Description
 Internal class that reads a scheduled task definition from a JSON file or a JSON string, validates the input, and creates the corresponding `OZOTask` object used by the module's public functions.

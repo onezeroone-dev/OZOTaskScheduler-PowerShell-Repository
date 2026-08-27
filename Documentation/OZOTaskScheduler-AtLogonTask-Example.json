@@ -7,6 +7,8 @@
     "Disabled":true,
     "Scheduled":false,
     "Schedules":[],
+    "Once":false,
+    "OnceDateTime":{},
     "AtReboot":false,
     "AtLogon":true
 }

@@ -1,5 +1,5 @@
 ## OZOSchedule
-This class is part of the [OZOTaskScheduler PowerShell Module](https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/README.md).
+This class is part of the [OZOTaskScheduler PowerShell Module](../README.md).
 
 ## Description
 Internal class that validates and stores a single schedule definition for a task. It provides the task trigger metadata used by the module when creating weekly scheduled tasks.

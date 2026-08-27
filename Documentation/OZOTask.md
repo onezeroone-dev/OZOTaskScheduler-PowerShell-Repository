@@ -1,5 +1,5 @@
 ## OZOTask
-This class is part of the [OZOTaskScheduler PowerShell Module](https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/README.md).
+This class is part of the [OZOTaskScheduler PowerShell Module](../README.md).
 
 ## Description
 Internal class that represents and manages a Windows scheduled task. This class validates task configuration, determines whether a task already exists, and performs common lifecycle operations such as creating, enabling, disabling, updating, and removing the task.

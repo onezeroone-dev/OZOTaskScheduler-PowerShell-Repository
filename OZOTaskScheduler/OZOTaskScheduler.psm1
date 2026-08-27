@@ -310,7 +310,6 @@ Class OZOTask {
             $this.AddTask()
         }
     }
-
 }
 # OZOScheduledTask class
 Class OZOJsonTask {
@@ -416,7 +415,7 @@ Function Disable-OZOScheduledTask {
     if ($null -ne $ozoGetScheduledTask -And $null -ne $ozoGetScheduledTask.Task) {
         # Task is not null; call DisableTask to disable the task
         $ozoGetScheduledTask.DisableTask()
-    }    
+    }
 }
 # Enable-OZOScheduledTask function
 Function Enable-OZOScheduledTask {

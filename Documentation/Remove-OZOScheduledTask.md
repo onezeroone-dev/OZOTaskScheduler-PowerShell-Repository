@@ -1,5 +1,5 @@
 # Remove-OZOScheduledTask
-This function is part of the [OZOTaskScheduler PowerShell Module](https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/README.md).
+This function is part of the [OZOTaskScheduler PowerShell Module](../README.md).
 
 ## Description
 Removes a task, if found.

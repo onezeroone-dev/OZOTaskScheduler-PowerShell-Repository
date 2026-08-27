@@ -1,5 +1,5 @@
 # New-OZOScheduledTask
-This function is part of the [OZOTaskScheduler PowerShell Module](https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/README.md).
+This function is part of the [OZOTaskScheduler PowerShell Module](../README.md).
 
 ## Description
 Creates a new scheduled task from a JSON file or a JSON string. The module uses `powershell.exe` to run `.ps1` scripts and `cmd.exe` to run other executable files.

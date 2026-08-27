@@ -1,5 +1,5 @@
 # Set-OZOScheduledTask
-This function is part of the [OZOTaskScheduler PowerShell Module](https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/README.md).
+This function is part of the [OZOTaskScheduler PowerShell Module](../README.md).
 
 ## Description
 Updates an existing scheduled task. The module uses `powershell.exe` to run `.ps1` scripts and `cmd.exe` to run other executable files. Tasks may run at logon for the logged-in user with the `AtLogon` setting, or may be scheduled to run as the _SYSTEM_ account with the `Scheduled` setting. _Scheduled_ tasks may also run at startup with the `AtReboot` setting.

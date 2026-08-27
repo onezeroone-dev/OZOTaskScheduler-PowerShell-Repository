@@ -22,6 +22,11 @@
             "RandomDelay":0
         }
     ],
-    "AtReboot":false,
+    "Once":false,
+    "OnceDateTime":{
+        "StartTime":"2026-09-01T09:00:00",
+        "RandomDelay":0
+    },
+    "AtReboot":true,
     "AtLogon":false
 }
