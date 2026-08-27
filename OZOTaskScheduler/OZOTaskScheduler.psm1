@@ -102,11 +102,11 @@ Class OZOTask {
     # PROPERTIES: OZOSchedule Lists
     [System.Collections.Generic.List[OZOSchedule]] $OZOSchedules = @()
     # PROPERTIES: Strings
-    [String] $Name          = $null
-    [String] $Script        = $null
-    [String] $Parameters    = $null
-    [String] $Directory     = $null
-    [String] $User          = $null
+    [String] $Name       = $null
+    [String] $Script     = $null
+    [String] $Parameters = $null
+    [String] $Directory  = $null
+    [String] $User       = $null
     # PROPERTIES: String Lists
     Hidden [System.Collections.Generic.List[String]] $Compatibilities = @("At","V1","Vista","Win7","Win8")
     # METHODS: Constructor method - Disable, Enable, Export, Get, Remove
