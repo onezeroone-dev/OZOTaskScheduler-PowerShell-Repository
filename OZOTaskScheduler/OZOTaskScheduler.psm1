@@ -31,11 +31,12 @@ Class OZOOnceDateTime {
         If ([Boolean]($this.DateTime -As [DateTime]) -eq $false) {
             # DateTime cannot be expressed as a DateTime
             $Return = $false
-        }
-        # Determine if DateTime is in the past
-        If ([DateTime]$this.DateTime -lt (Get-Date)) {
-            # DateTime is in the past
-            $Return = $false
+        } Else {
+            # DateTime can be expressed as a DateTime; determine if DateTime is in the past
+            If ([DateTime]$this.DateTime -lt (Get-Date)) {
+                # DateTime is in the past
+                $Return = $false
+            }
         }
         # Return
         return $Return
@@ -187,8 +188,8 @@ Class OZOTask {
                 $this.ozoLogger.Write(($this.Name + "Once is enabled but OnceDateTime is null."),"Error")
                 $Return = $false
             }
-            # Determine if Once is true and OnceDateTime is null and OnceDateTime is not valid
-            If ($this.Once -eq $true -And $null -eq $this.OnceDateTime -And $this.OnceDateTime.Valid -eq $false) {
+            # Determine if Once is true and OnceDateTime is not null and OnceDateTime is not valid
+            If ($this.Once -eq $true -And $null -ne $this.OnceDateTime -And $this.OnceDateTime.Valid -eq $false) {
                 # Once is true and OnceDateTime not null and OnceDateTime is not valid
                 $this.ozoLogger.Write(($this.Name + "Once is enabled but OnceDateTime is not valid."),"Error")
                 $Return = $false
@@ -550,7 +551,7 @@ Function Export-OZOScheduledTask {
     # Determine if the task is not null
     If ($null -ne $ozoGetScheduledTask -And $null -ne $ozoGetScheduledTask.Task) {
         # Task is not null; export all properties except Compatibilities as Json to a file
-        $ozoGetScheduledTask | Select-Object -ExcludeProperty Compatibilities | ConvertTo-Json | Out-File -Path $OutFile
+        $ozoGetScheduledTask | Select-Object -Property Name,Script,Parameters,Compatibility,Directory,Disabled,Scheduled,@{Name="Schedules";Expression={$_.OZOSchedules}},Once,OnceDateTime,AtReboot,AtLogon | ConvertTo-Json | Out-File -Path $OutFile
     }
 }
 # Get-OZOScheduledTask function
