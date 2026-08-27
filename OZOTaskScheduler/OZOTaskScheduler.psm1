@@ -241,7 +241,96 @@ Class OZOTask {
     }
     # METHODS: Populate from existing task method
     Hidden [Void] GetExistingTask() {
-
+        # Get the existing task definition
+        Try {
+            $ScheduledTask = Get-ScheduledTask -TaskName $this.Name -ErrorAction Stop
+        } Catch {
+            $this.ozoLogger.Write(("Failed to get the " + $this.Name + " task with error " + $_ + "."), "Error")
+            return
+        }
+        # Populate task settings and principal information
+        $this.Disabled = -Not [Boolean]$ScheduledTask.Settings.Enabled
+        $this.Settings = [PSCustomObject]@{
+            Compatibility = [String]$ScheduledTask.Settings.Compatibility
+        }
+        $this.User = [String]$ScheduledTask.Principal.UserId
+        # Populate the supported action formats created by this module
+        $Action = $ScheduledTask.Actions | Select-Object -First 1
+        If ($null -ne $Action) {
+            $this.Directory = [String]$Action.WorkingDirectory
+            If ($Action.Execute -match 'powershell\.exe$') {
+                $ActionMatch = [Regex]::Match([String]$Action.Arguments, '-File\s+"(?<Script>[^"]+)"\s*(?<Parameters>.*)$')
+                If ($ActionMatch.Success) {
+                    $this.Script = $ActionMatch.Groups['Script'].Value
+                    $this.Parameters = $ActionMatch.Groups['Parameters'].Value
+                } Else {
+                    $this.ozoLogger.Write(($this.Name + " uses an unsupported PowerShell action format."), "Warning")
+                }
+            } ElseIf ($Action.Execute -match 'cmd\.exe$') {
+                $ActionMatch = [Regex]::Match([String]$Action.Arguments, '/Q\s+/C\s+"(?<Script>[^"]+)"\s*(?<Parameters>.*)$')
+                If ($ActionMatch.Success) {
+                    $this.Script = $ActionMatch.Groups['Script'].Value
+                    $this.Parameters = $ActionMatch.Groups['Parameters'].Value
+                } Else {
+                    $this.ozoLogger.Write(($this.Name + " uses an unsupported CMD action format."), "Warning")
+                }
+            } Else {
+                $this.ozoLogger.Write(($this.Name + " uses an unsupported action executable."), "Warning")
+            }
+        }
+        # Reset trigger state before mapping supported Task Scheduler triggers
+        $this.AtLogon = $false
+        $this.AtReboot = $false
+        $this.Once = $false
+        $this.OnceDateTime = $null
+        $this.Scheduled = $false
+        $this.OZOSchedules.Clear()
+        ForEach ($Trigger in $ScheduledTask.Triggers) {
+            $RandomDelay = 0
+            If ([String]::IsNullOrEmpty([String]$Trigger.RandomDelay) -eq $false) {
+                $RandomDelay = [Int32][System.Xml.XmlConvert]::ToTimeSpan([String]$Trigger.RandomDelay).TotalSeconds
+            }
+            Switch ($Trigger.CimClass.CimClassName) {
+                'MSFT_TaskWeeklyTrigger' {
+                    $this.Scheduled = $true
+                    $StartTime = ([DateTime]$Trigger.StartBoundary).ToString("h:mm tt")
+                    $Weekdays = @(
+                        [PSCustomObject]@{ Name = "Sunday"; Value = 1 },
+                        [PSCustomObject]@{ Name = "Monday"; Value = 2 },
+                        [PSCustomObject]@{ Name = "Tuesday"; Value = 4 },
+                        [PSCustomObject]@{ Name = "Wednesday"; Value = 8 },
+                        [PSCustomObject]@{ Name = "Thursday"; Value = 16 },
+                        [PSCustomObject]@{ Name = "Friday"; Value = 32 },
+                        [PSCustomObject]@{ Name = "Saturday"; Value = 64 }
+                    )
+                    ForEach ($Weekday in $Weekdays) {
+                        If (([Int32]$Trigger.DaysOfWeek -band $Weekday.Value) -ne 0) {
+                            $this.OZOSchedules.Add([OZOSchedule]::new([PSCustomObject]@{
+                                WeekDay = $Weekday.Name
+                                StartTime = $StartTime
+                                RandomDelay = $RandomDelay
+                            }))
+                        }
+                    }
+                }
+                'MSFT_TaskTimeTrigger' {
+                    $this.Once = $true
+                    $this.OnceDateTime = [OZOOnceDateTime]::new([PSCustomObject]@{
+                        DateTime = ([DateTime]$Trigger.StartBoundary).ToString("o")
+                        RandomDelay = $RandomDelay
+                    })
+                }
+                'MSFT_TaskBootTrigger' {
+                    $this.AtReboot = $true
+                }
+                'MSFT_TaskLogonTrigger' {
+                    $this.AtLogon = $true
+                }
+                Default {
+                    $this.ozoLogger.Write(($this.Name + " uses an unsupported trigger type: " + $Trigger.CimClass.CimClassName + "."), "Warning")
+                }
+            }
+        }
     }
     # METHODS: AddTask method
     [Void] AddTask() {
