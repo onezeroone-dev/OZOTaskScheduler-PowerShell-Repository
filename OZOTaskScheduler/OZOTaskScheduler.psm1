@@ -1,7 +1,7 @@
 #Requires -RunAsAdministrator
 
 # CLASSES
-# OZOOnce class
+# OZOOnceDateTime class
 Class OZOOnceDateTime {
     # PROPERTIES: Booleans
     [Boolean] $Valid = $false
@@ -30,6 +30,11 @@ Class OZOOnceDateTime {
         # Determine if DateTime cannot be expressed as a DateTime
         If ([Boolean]($this.DateTime -As [DateTime]) -eq $false) {
             # DateTime cannot be expressed as a DateTime
+            $Return = $false
+        }
+        # Determine if DateTime is in the past
+        If ([DateTime]$this.DateTime -lt (Get-Date)) {
+            # DateTime is in the past
             $Return = $false
         }
         # Return
@@ -92,7 +97,8 @@ Class OZOTask {
     Hidden [PSCustomObject] $ozoLogger = $null
     Hidden [OZOOnceDateTime] $OnceDateTime = $null
     # PROPERTIES: PSCustomObject Lists
-    [System.Collections.Generic.List[OZOSchedule]] $Schedules = @()
+    [System.Collections.Generic.List[PSCustomObject]] $Schedules = @()
+    [System.Collections.Generic.List[PSCustomObject]] $OZOSchedules = @()
     # PROPERTIES: Strings
     [String] $Name          = $null
     [String] $Script        = $null
@@ -115,7 +121,7 @@ Class OZOTask {
         }
     }
     # METHODS: Constructor method - full
-    OZOTask([String]$Name,[String]$Script,[String]$Parameters,[String]$Compatibility,[String]$Directory,[String]$User,[Boolean]$Disabled,[Boolean]$Scheduled,[System.Collections.Generic.List[OZOSchedule]]$Schedules,[Boolean]$Once,[OZOOnceDateTime]$OnceDateTime,[Boolean]$AtReboot,[Boolean]$AtLogon) {
+    OZOTask([String]$Name,[String]$Script,[String]$Parameters,[String]$Compatibility,[String]$Directory,[String]$User,[Boolean]$Disabled,[Boolean]$Scheduled,[System.Collections.Generic.List[PSCustomObject]]$Schedules,[Boolean]$Once,[OZOOnceDateTime]$OnceDateTime,[Boolean]$AtReboot,[Boolean]$AtLogon) {
         # Set Properties
         $this.Name          = $Name
         $this.Script        = $Script
@@ -134,11 +140,11 @@ Class OZOTask {
         # Iterate over schedules
         ForEach ($Schedule in $Schedules) {
             # Instantiate an OZOSchedule object and add it to the schedules list
-            $this.Schedules.Add(([OZOSchedule]::new($Schedule)))
+            $this.OZOSchedules.Add(([OZOSchedule]::new($Schedule)))
         }
         # Iterate over once date times
         If ($this.Once -eq $true) {
-            # Instantiate an OZOOnce object and add it to the once date times list
+            # Instantiate an OZOOnceDateTime object and store it as OnceDateTime
             $this.OnceDateTime = ([OZOOnceDateTime]::new($OnceDateTime))
         }
     }
@@ -172,14 +178,14 @@ Class OZOTask {
                 }
             }
             # Determine if Scheduled is set and there are no valid schedules
-            If ($this.Scheduled -eq $true -And ($this.Schedules | Where-Object {$_.Valid -eq $true}).Count -eq 0) {
+            If ($this.Scheduled -eq $true -And ($this.OZOSchedules | Where-Object {$_.Valid -eq $true}).Count -eq 0) {
                 # Scheduled is set and there are no valid schedules
                 $this.ozoLogger.Write(($this.Name + "Scheduled is enabled but no valid schedules were found."),"Error")
                 $Return = $false
             }
-            # Determine if Once is set and OnceDateTime is not valid
+            # Determine if Once is true and OnceDateTime is not valid
             If ($this.Once -eq $true -And $this.OnceDateTime.Valid -eq $false) {
-                # Once is set and OnceDateTime is not valid
+                # Once is true and OnceDateTime is not valid
                 $this.ozoLogger.Write(($this.Name + "Once is enabled but OnceDateTime is not valid."),"Error")
                 $Return = $false
             }
@@ -205,12 +211,6 @@ Class OZOTask {
                 $this.Directory = (Split-Path -Path $this.Script -Parent)
             }
         }
-        # Determine if Scheduled is set and there are no schedules
-        If ($this.Scheduled -eq $true -And ($this.Schedules | Where-Object {$_.Valid -eq $true}).Count -eq 0) {
-            # Scheduled is set and there are no schedules
-            $this.ozoLogger.Write(($this.Name + "Scheduled is enabled but no valid schedules were found."),"Error")
-            $Return = $false
-        }
         # Return
         return $Return
     }
@@ -234,33 +234,29 @@ Class OZOTask {
     [Void] AddTask() {
         # Local variables
         [System.Collections.Generic.List[Microsoft.Management.Infrastructure.CimInstance]] $Triggers = @()
+        $actionParameters = @{}
+        $settingsParameters = @{}
+        $scheduledTaskParameters = @{}
         # Determine if the task does not exist and is valid
         If ($this.Exists() -eq $false -And $this.Validates() -eq $true) {
-            # Determineone of Scheduled, Once, or AtReboot is true
-            If ($this.Scheduled -eq $true -Or $this.Once -eq $true -Or $this.AtReboot -eq $true) {
-                # AtLogon is false and one of Scheduled, Once, or AtReboot is true; determine if scheduled is true and at least one schedule is valid
-                If ($this.Scheduled -eq $true -And ($this.Schedules | Where-Object {$_.Valid -eq $true}).Count -gt 0) {
-                    # Schedules is not null and there is at least one valid schedule; iterate over the valid schedules and create triggers
-                    ForEach ($Schedule in ($this.Schedules | Where-Object {$_.Valid -eq $true})) {
-                        # Create a weekly trigger for each schedule and add the trigger to the list of triggers
-                        $Triggers.Add((New-ScheduledTaskTrigger -Weekly -DaysOfWeek $Schedule.Weekday -At $Schedule.StartTime -RandomDelay (New-TimeSpan -Start [DateTime]$Schedule.StartTime -End ([DateTime]($Schedule.StartTime).AddSeconds($Schedule.RandomDelay)))))
-                    }
+            ## ACTION PARAMETERS
+            # Determine if this script is a PowerShell script
+            If ((Get-Item -Path $this.Script).Extension -eq ".ps1") {
+                # Script is PowerShell; set paramters for New-ScheduledTaskAction with PowerShell executable and arguments
+                $actionParameters = @{
+                    Execute = 'powershell.exe'
+                    Argument = ('-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy RemoteSigned  -File "' + $this.Script + '" ' + $this.Parameters)
+                    WorkingDirectory = $this.Directory
                 }
-                # Determine Once is true and OnceDateTime is valid
-                If ($this.Once -eq $true -And $this.OnceDateTime.Valid -eq $true) {
-                    # nce is true, and OnceDateTime is valid; create a one-time trigger and add it to the list of triggers
-                    $Triggers.Add((New-ScheduledTaskTrigger -Once -At $this.OnceDateTime.DateTime -RandomDelay (New-TimeSpan -Start [DateTime]$this.OnceDateTime.DateTime -End ([DateTime]($this.OnceDateTime.DateTime).AddSeconds($this.OnceDateTime.RandomDelay)))))
+            } Else {
+                # Script is not PowerShell; set executable and argument for CMD
+                $actionParameters = @{
+                    Execute = "cmd.exe"
+                    Argument = ('/Q /C "' + $this.Script + '" ' + $this.Parameters)
+                    WorkingDirectory = $this.Directory
                 }
-                # Determine AtReboot is true
-                If ($this.AtLogon -eq $false -And $this.AtReboot -eq $true) {
-                    # AtLogon is false and AtReboot is true; create a boot trigger and it to the list of triggers
-                    $Triggers.Add((New-ScheduledTaskTrigger -AtStartup))
-                }
-            # ElseIf determine if AtLogon is true and all of Scheduled, Once, and AtReboot are false
-            } ElseIf ($this.AtLogon -eq $true -And $this.Scheduled -eq $false -And $this.Once -eq $false -And $this.AtReboot -eq $false) {
-                # AtLogon is true, Scheduled is false, and AtReboot is false; create a logon trigger and a it to the list of triggers
-                $Triggers.Add((New-ScheduledTaskTrigger -AtLogOn))
             }
+            ## SETTINGS PARAMETERS
             # Determine if Disabled is set
             If ($this.Disabled -eq $true) {
                 # Disabled is set; set parameters for New-ScheduledTaskSettingsSet with the Disabled parameter
@@ -278,36 +274,42 @@ Class OZOTask {
                     StartWhenAvailable        = $true
                 }
             }
-            # Determine if this script is a PowerShell script
-            If ((Get-Item -Path $this.Script).Extension -eq ".ps1") {
-                # Script is PowerShell; set paramters for New-ScheduledTaskAction with PowerShell executable and arguments
-                $actionParameters = @{
-                    Execute = 'powershell.exe'
-                    Argument = ('-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy RemoteSigned  -File "' + $this.Script + '" ' + $this.Parameters)
-                    WorkingDirectory = $this.Directory
+            ## TRIGGERS AND SCHEDULED TASK PARAMETERS
+            # Determine if at least one of Scheduled, Once, or AtReboot is true
+            If ($this.Scheduled -eq $true -Or $this.Once -eq $true -Or $this.AtReboot -eq $true) {
+                # AtLogon is false and one of Scheduled, Once, or AtReboot is true; determine if scheduled is true and at least one schedule is valid
+                If ($this.Scheduled -eq $true -And ($this.OZOSchedules | Where-Object {$_.Valid -eq $true}).Count -gt 0) {
+                    # Schedules is not null and there is at least one valid schedule; iterate over the valid schedules and create triggers
+                    ForEach ($Schedule in ($this.OZOSchedules | Where-Object {$_.Valid -eq $true})) {
+                        # Create a weekly trigger for each schedule and add the trigger to the list of triggers
+                        $Triggers.Add((New-ScheduledTaskTrigger -Weekly -DaysOfWeek $Schedule.Weekday -At $Schedule.StartTime -RandomDelay (New-TimeSpan -Start [DateTime]$Schedule.StartTime -End ([DateTime]($Schedule.StartTime).AddSeconds($Schedule.RandomDelay)))))
+                    }
                 }
-            } Else {
-                # Script is not PowerShell; set executable and argument for CMD
-                $actionParameters = @{
-                    Execute = "cmd.exe"
-                    Argument = ('/Q /C "' + $this.Script + '" ' + $this.Parameters)
-                    WorkingDirectory = $this.Directory
+                # Determine Once is true and OnceDateTime is valid
+                If ($this.Once -eq $true -And $this.OnceDateTime.Valid -eq $true) {
+                    # Once is true, and OnceDateTime is valid; create a one-time trigger and add it to the list of triggers
+                    $Triggers.Add((New-ScheduledTaskTrigger -Once -At $this.OnceDateTime.DateTime -RandomDelay (New-TimeSpan -Start [DateTime]$this.OnceDateTime.DateTime -End ([DateTime]($this.OnceDateTime.DateTime).AddSeconds($this.OnceDateTime.RandomDelay)))))
                 }
-            }
-            # Determine if AtLogon is set
-            If ($this.AtLogon -eq $true) {
-                # AtLogon is set; set parameters for Register-ScheduledTask without User parameter
+                # Determine AtReboot is true
+                If ($this.AtLogon -eq $false -And $this.AtReboot -eq $true) {
+                    # AtLogon is false and AtReboot is true; create a boot trigger and it to the list of triggers
+                    $Triggers.Add((New-ScheduledTaskTrigger -AtStartup))
+                }
+                # Set scheduled task parameters for Register-ScheduledTask with User parameter
                 $scheduledTaskParameters = @{
                     TaskName = $this.Name
+                    User     = $this.User
                     Action   = (New-ScheduledTaskAction @actionParameters)
                     Trigger  = $Triggers
                     Settings = (New-ScheduledTaskSettingsSet @settingsParameters)
                 }
-            } Else {
-                # AtLogon is not set; set parameters for Register-ScheduledTask with User parameter
+            # ElseIf determine if AtLogon is true and all of Scheduled, Once, and AtReboot are false
+            } ElseIf ($this.AtLogon -eq $true -And $this.Scheduled -eq $false -And $this.Once -eq $false -And $this.AtReboot -eq $false) {
+                # AtLogon is true, Scheduled is false, and AtReboot is false; create a logon trigger and a it to the list of triggers
+                $Triggers.Add((New-ScheduledTaskTrigger -AtLogOn))
+                # Set scheduled task parameters for Register-ScheduledTask without User parameter
                 $scheduledTaskParameters = @{
                     TaskName = $this.Name
-                    User     = $this.User
                     Action   = (New-ScheduledTaskAction @actionParameters)
                     Trigger  = $Triggers
                     Settings = (New-ScheduledTaskSettingsSet @settingsParameters)
@@ -411,7 +413,7 @@ Class OZOJsonTask {
                     $this.Json.Scheduled,
                     $this.Json.Schedules,
                     $this.Json.Once,
-                    $this.Json.OnceDateTimes,
+                    $this.Json.OnceDateTime,
                     $this.Json.AtReboot,
                     $this.Json.AtLogon
                 )
@@ -594,7 +596,7 @@ Function New-OZOScheduledTask {
     # Instantiate an OZOJsonTask object
     [PSCustomObject] $ozoJsonTask = ([OZOJsonTask]::new($JsonFile,$JsonString))
     # Determine if the task does not exist and validates
-    If ($ozoJsonTask.Task.Exists() -eq $false -And $ozoJsonTask.Task.Validates() -eq $true) {
+    If ($null -ne $ozoJsonTask -And $ozoJsonTask.Task.Exists() -eq $false -And $ozoJsonTask.Task.Validates() -eq $true) {
         # Task does not exiust and validates; add it
         $ozoJsonTask.Task.AddTask()
     }

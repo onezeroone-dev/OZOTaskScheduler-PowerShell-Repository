@@ -30,6 +30,8 @@ Creates a new instance for task creation or update operations.
 - `$Disabled`: Indicates whether the task should be disabled when created
 - `$Scheduled`: Indicates whether the task uses scheduled triggers
 - `$Schedules`: A list of schedule definitions
+- `$Once`: Indicates whether the task has a one-time date/time trigger
+- `$OnceDateTime`: The one-time date/time trigger definition
 - `$AtReboot`: Indicates whether the task should run at startup/reboot
 - `$AtLogon`: Indicates whether the task should run at logon
 
@@ -37,6 +39,7 @@ Creates a new instance for task creation or update operations.
 Public properties:
 - `$Disabled`: Boolean indicating whether the task is disabled
 - `$Scheduled`: Boolean indicating whether the task has scheduled triggers
+- `$Once`: Boolean indicating whether the task has a one-time trigger
 - `$AtReboot`: Boolean indicating whether the task runs at startup
 - `$AtLogon`: Boolean indicating whether the task runs at logon
 - `$Schedules`: A list of schedule objects associated with the task
@@ -47,7 +50,7 @@ Public properties:
 - `$Directory`: Working directory for the task action
 - `$User`: Account associated with the task
 
-`$ozoLogger` and `$Compatibilities` are hidden internal properties used for logging and compatibility validation.
+`$ozoLogger`, `$Compatibilities`, and `$OnceDateTime` are hidden internal properties used for logging, compatibility validation, and one-time trigger configuration.
 
 ## Methods
 - **Validates()**
@@ -63,7 +66,7 @@ Public properties:
   - Returns: `Void`
 
 - **AddTask()**
-  Creates the scheduled task using the configured triggers and execution action. When `.ps1` files are used, the module invokes `powershell.exe`; otherwise, it uses `cmd.exe`.
+  Creates the scheduled task using the configured weekly, one-time, startup, or logon triggers and execution action. When `.ps1` files are used, the module invokes `powershell.exe`; otherwise, it uses `cmd.exe`. `AtLogon` is ignored when `Scheduled`, `Once`, or `AtReboot` is enabled.
   - Returns: `Void`
 
 - **EnableTask()**

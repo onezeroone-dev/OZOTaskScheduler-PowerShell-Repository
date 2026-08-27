@@ -29,6 +29,7 @@ Import-Module OZOTaskScheduler
 ## Classes
 - [OZOJsonTask](Documentation/OZOJsonTask.md)
 - [OZOTask](Documentation/OZOTask.md)
+- [OZOOnceDateTime](Documentation/OZOOnceDateTime.md)
 - [OZOSchedule](Documentation/OZOSchedule.md)
 
 ## Logging
