@@ -11,7 +11,7 @@ This is an **internal class** used by the module's public functions. It is not i
 
 **Minimal Constructor**
 ```
-OZOTask($Name:String)
+OZOTask($Name:String, $Script:String, $Parameters:String, $Compatibility:String, $Directory:String, $User:String, $Disabled:Boolean, $Scheduled:Boolean, $Schedules:System.Collections.Generic.List[System.Collections.IEnumerable], $Once:Boolean, $OnceDateTime:PSCustomObject, $AtReboot:Boolean, $AtLogon:Boolean)
 ```
 Creates a new instance for an existing task lookup or a task that will be managed by name.
 - `$Name`: The name of the scheduled task

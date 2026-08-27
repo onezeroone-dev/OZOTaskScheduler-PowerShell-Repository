@@ -90,12 +90,12 @@ The following example shows an _AtLogon_ task:
 |`Compatibility`|Task compatibility mode. Allowed values are _At_, _V1_, _Vista_, _Win7_, and _Win8_. Defaults to _Win8_.|
 |`Directory`|The working directory for the task.|
 |`Disabled`|Determines whether the task is disabled when created. Allowed values are _true_ and _false_.|
-`Scheduled`|Determines whether the task runs on one or more weekly schedules. Allowed values are _true_ and _false_. May be combined with _Once_ and _AtReboot_. If combined with _AtLogon_, the _AtLogon_ trigger is ignored.|
+|`Scheduled`|Determines whether the task runs on one or more weekly schedules. Allowed values are _true_ and _false_. May be combined with _Once_ and _AtReboot_. If combined with _AtLogon_, the _AtLogon_ trigger is ignored.|
 |`Schedules`|The schedule definitions for _Scheduled_ tasks. See _Schedules_, below.|
-`Once`|Determines whether the task runs once at the date and time in _OnceDateTime_. Allowed values are _true_ and _false_. May be combined with _Scheduled_ and _AtReboot_. If combined with _AtLogon_, the _AtLogon_ trigger is ignored.|
-`OnceDateTime`|The one-time trigger definition. Required when _Once_ is _true_; use an empty object when _Once_ is _false_. See _OnceDateTime_, below.|
-`AtReboot`|Determines whether the task runs at startup/reboot. Allowed values are _true_ and _false_. May be combined with _Scheduled_ and _Once_. If combined with _AtLogon_, the _AtLogon_ trigger is ignored.|
-`AtLogon`|Determines whether the task runs at user logon. Allowed values are _true_ and _false_. The trigger is created only when _Scheduled_, _Once_, and _AtReboot_ are all _false_.|
+|`Once`|Determines whether the task runs once at the date and time in _OnceDateTime_. Allowed values are _true_ and _false_. May be combined with _Scheduled_ and _AtReboot_. If combined with _AtLogon_, the _AtLogon_ trigger is ignored.|
+|`OnceDateTime`|The one-time trigger definition. Required when _Once_ is _true_; use an empty object when _Once_ is _false_. See _OnceDateTime_, below.|
+|`AtReboot`|Determines whether the task runs at startup/reboot. Allowed values are _true_ and _false_. May be combined with _Scheduled_ and _Once_. If combined with _AtLogon_, the _AtLogon_ trigger is ignored.|
+|`AtLogon`|Determines whether the task runs at user logon. Allowed values are _true_ and _false_. The trigger is created only when _Scheduled_, _Once_, and _AtReboot_ are all _false_.|
 
 _Schedules_ is a list of dictionaries. Each dictionary should contain a `WeekDay`, `StartTime`, and `RandomDelay` value in seconds. Example:
 ```json
