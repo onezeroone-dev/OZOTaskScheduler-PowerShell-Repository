@@ -33,9 +33,18 @@ Tasks are expressed as a JSON dictionary. The following example shows a _Schedul
     "Name":"Example Scheduled Task",
     "Script":"C:\\Temp\\OZOTaskScheduler-ScheduledTask-Example.json",
     "Parameters":"",
-    "Compatibility":"Win8",
     "Directory":"C:\\Temp",
     "Disabled":true,
+    "Settings":{
+        "Compatibility":"Win8"
+    },
+    "AtLogon":false,
+    "AtReboot":true,
+    "Once":true,
+    "OnceDateTime":{
+        "DateTime":"2026-09-01T09:00:00",
+        "RandomDelay":0
+    },
     "Scheduled":true,
     "Schedules":[
         {
@@ -53,14 +62,7 @@ Tasks are expressed as a JSON dictionary. The following example shows a _Schedul
             "StartTime":"8:00 AM",
             "RandomDelay":0
         }
-    ],
-    "Once":true,
-    "OnceDateTime":{
-        "DateTime":"2026-09-01T09:00:00",
-        "RandomDelay":0
-    },
-    "AtReboot":false,
-    "AtLogon":false
+    ]
 }
 ```
 
@@ -70,15 +72,17 @@ The following example shows an _AtLogon_ task:
     "Name":"Example AtLogon Task",
     "Script":"C:\\Temp\\OZOTaskScheduler-ScheduledTask-Example.json",
     "Parameters":"",
-    "Compatibility":"Win8",
     "Directory":"C:\\Temp",
     "Disabled":true,
-    "Scheduled":false,
-    "Schedules":[],
+    "Settings":{
+        "Compatibility":"Win8"
+    },
+    "AtLogon":true,
+    "AtReboot":false,
     "Once":false,
     "OnceDateTime":{},
-    "AtReboot":false,
-    "AtLogon":true
+    "Scheduled":false,
+    "Schedules":[]
 }
 ```
 

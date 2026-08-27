@@ -207,9 +207,16 @@ Class OZOTask {
                 $this.ozoLogger.Write(($this.Name + "AtLogon is enabled but other triggers are also set. AtLogon will be ignored."),"Warning")
             }
             # Determine if Compatibility is not found in Compatibilities
-            If ($this.Compatibilities -NotContains $this.Compatibility) {
+            If ($this.Compatibilities -NotContains $this.Settings.Compatibility) {
                 # Compatibility is not found in Compatibilities
-                $this.Compatibility = "Win8"
+                $this.Settings.Compatibility = "Win8"
+            }
+            # Determine if Settings is null
+            If ($null -eq $this.Settings) {
+                # Settings is null; set to default
+                $this.Settings = [PSCustomObject]@{
+                    Compatibility = "Win8"
+                }
             }
             # Determine if Directory is null or empty
             If ([String]::IsNullOrEmpty($this.Directory)) {
@@ -552,7 +559,7 @@ Function Export-OZOScheduledTask {
     # Determine if the task is not null
     If ($null -ne $ozoGetScheduledTask -And $null -ne $ozoGetScheduledTask.Task) {
         # Task is not null; export all properties except Compatibilities as Json to a file
-        $ozoGetScheduledTask | Select-Object -Property Name,Script,Parameters,Compatibility,Directory,Disabled,Scheduled,@{Name="Schedules";Expression={$_.OZOSchedules}},Once,OnceDateTime,AtReboot,AtLogon | ConvertTo-Json | Out-File -Path $OutFile
+        $ozoGetScheduledTask | Select-Object -Property Name,Script,Parameters,Directory,Disabled,Settings,AtLogon,AtReboot,Once,OnceDateTime,Scheduled,@{Name="Schedules";Expression={$_.OZOSchedules | Select-Object -Property DateTime,RandomDelay}} | ConvertTo-Json | Out-File -Path $OutFile
     }
 }
 # Get-OZOScheduledTask function
