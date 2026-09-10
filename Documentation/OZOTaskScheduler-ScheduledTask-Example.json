@@ -8,7 +8,6 @@
         "AllowDemandStart":true,
         "AllowHardTerminate":true,
         "AllowStartOnRemoteAppSession":true,
-        "AllowStartOnRemoteAppSessionOnly":false,
         "Compatibility":"Win8",
         "DeleteExpiredTaskAfter":"PT0S",
         "DisallowStartIfOnBatteries":false,

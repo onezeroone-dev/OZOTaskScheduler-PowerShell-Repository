@@ -26,7 +26,7 @@ Creates a new instance for task creation or update operations.
 - `$Parameters`: Optional parameters to pass to the script or program
 - `$Directory`: The working directory for the task
 - `$Disabled`: Indicates whether the task should be disabled when created
-- `$Settings`: The task settings dictionary; currently contains `Compatibility`
+- `$Settings`: The task settings dictionary. See [Set-OZOScheduledTask](Set-OZOScheduledTask.md) for the full schema
 - `$User`: The account that the task should run as
 - `$AtLogon`: Indicates whether the task should run at logon
 - `$AtReboot`: Indicates whether the task should run at startup/reboot
@@ -49,7 +49,7 @@ Public properties:
 - `$Directory`: Working directory for the task action
 - `$User`: Account associated with the task
 
-`$ozoLogger`, `$Compatibilities`, `$OnceDateTime`, and `$Settings` are hidden internal properties used for logging, compatibility validation, one-time trigger configuration, and Task Scheduler settings.
+`$ozoLogger`, `$Compatibilities`, `$MultipleInstancesValues`, `$OnceDateTime`, and `$Settings` are hidden internal properties used for logging, compatibility validation, `MultipleInstances` validation, one-time trigger configuration, and Task Scheduler settings.
 
 ## Methods
 - **Validates()**
@@ -63,6 +63,14 @@ Public properties:
 - **GetExistingTask()**
   Hidden method used to populate task metadata from an existing Windows scheduled task.
   - Returns: `Void`
+
+- **GetPriorityValue()**
+  Hidden method that resolves `Settings.Priority` to a supported integer (0-10), accepting the friendly value `Normal` and defaulting to `7` for missing or invalid values.
+  - Returns: `Int32`
+
+- **GetSettingsParameters()**
+  Hidden method that translates the `Settings` dictionary into the parameters used to build the task's `New-ScheduledTaskSettingsSet` object.
+  - Returns: `Hashtable`
 
 - **AddTask()**
   Creates the scheduled task using the configured weekly, one-time, startup, or logon triggers and execution action. When `.ps1` files are used, the module invokes `powershell.exe`; otherwise, it uses `cmd.exe`. `AtLogon` is ignored when `Scheduled`, `Once`, or `AtReboot` is enabled.

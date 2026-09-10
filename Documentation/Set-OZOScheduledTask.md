@@ -39,7 +39,6 @@ Tasks are expressed as a JSON dictionary. The following example shows a _Schedul
         "AllowDemandStart":true,
         "AllowHardTerminate":true,
         "AllowStartOnRemoteAppSession":true,
-        "AllowStartOnRemoteAppSessionOnly":false,
         "Compatibility":"Win8",
         "DeleteExpiredTaskAfter":"PT0S",
         "DisallowStartIfOnBatteries":false,
@@ -95,7 +94,6 @@ The following example shows an _AtLogon_ task:
         "AllowDemandStart":true,
         "AllowHardTerminate":true,
         "AllowStartOnRemoteAppSession":true,
-        "AllowStartOnRemoteAppSessionOnly":false,
         "Compatibility":"Win8",
         "DeleteExpiredTaskAfter":"PT0S",
         "DisallowStartIfOnBatteries":false,
@@ -141,7 +139,6 @@ _Settings_ is a dictionary containing Task Scheduler settings:
     "AllowDemandStart":true,
     "AllowHardTerminate":true,
     "AllowStartOnRemoteAppSession":true,
-    "AllowStartOnRemoteAppSessionOnly":false,
     "Compatibility":"Win8",
     "DeleteExpiredTaskAfter":"PT0S",
     "DisallowStartIfOnBatteries":false,
@@ -161,21 +158,20 @@ _Settings_ is a dictionary containing Task Scheduler settings:
 
 |Key|Description|
 |---|-----------|
-|`AllowDemandStart`||
-|`AllowHardTerminate`||
-|`AllowStartOnRemoteAppSession`||
-|`AllowStartOnRemoteAppSessionOnly`||
+|`AllowDemandStart`|Determines whether the task can be started on demand (manually or by another program). Allowed values are _true_ and _false_. Defaults to _true_.|
+|`AllowHardTerminate`|Determines whether the task can be terminated by ending its process. Allowed values are _true_ and _false_. Defaults to _true_.|
+|`AllowStartOnRemoteAppSession`|Determines whether the task can start when launched from a Remote Desktop/RemoteApp session. Allowed values are _true_ and _false_. Defaults to _true_.|
 |`Compatibility`|Task compatibility mode. Allowed values are _At_, _V1_, _Vista_, _Win7_, and _Win8_. Defaults to _Win8_.|
-|`AllowStartOnRemoteAppSessionOnly`||
-|`DeleteExpiredTaskAfter`||
-|`DisallowStartIfOnBatteries`||
-|`DontStopIfGoingOnBatteries`||
-|`ExecutionTimeLimit`||
-|`Hidden`||
-|`IdleSettings`|See _IdleSettings_, below.|
-|`MultipleInstances`||
-|`Priority`||
-|`RunOnlyIfNetworkAvailable`||
+|`DeleteExpiredTaskAfter`|The amount of time to wait after the task expires before Task Scheduler deletes it, expressed as an ISO 8601 duration (for example, _PT0S_ or _P30D_). Omit to never delete the task automatically.|
+|`DisallowStartIfOnBatteries`|Determines whether the task is prevented from starting when the computer is running on battery power. Allowed values are _true_ and _false_. Defaults to _true_.|
+|`DontStopIfGoingOnBatteries`|Determines whether a running task keeps running after the computer switches to battery power. Allowed values are _true_ and _false_. Defaults to _false_.|
+|`ExecutionTimeLimit`|The maximum amount of time the task is allowed to run, expressed as an ISO 8601 duration (for example, _PT72H_, or _PT0S_ for no limit). Defaults to _PT72H_.|
+|`Hidden`|Determines whether the task is hidden in the Task Scheduler UI. Allowed values are _true_ and _false_. Defaults to _false_.|
+|`IdleSettings`|Idle-related settings for the task. See _IdleSettings_, below.|
+|`MultipleInstances`|Determines how Task Scheduler handles multiple simultaneous instances of the task. Allowed values are _IgnoreNew_, _Parallel_, and _Queue_. Defaults to _IgnoreNew_.|
+|`Priority`|The task's process priority. Accepts an integer from _0_ (highest) to _10_ (lowest), or the friendly value _Normal_ (equivalent to _7_). Defaults to _7_.|
+|`RunOnlyIfNetworkAvailable`|Determines whether the task only runs when a network connection is available. Allowed values are _true_ and _false_. Defaults to _false_.|
+|`WakeToRun`|Determines whether the computer is woken from sleep to run the task. Allowed values are _true_ and _false_. Defaults to _false_.|
 
 _IdleSettings_ is a dictionary containing idle settings:
 ```
@@ -187,8 +183,8 @@ _IdleSettings_ is a dictionary containing idle settings:
 
 |Key|Description|
 |---|-----------|
-|`StopOnIdleEnd`||
-|`RestartOnIdle`||
+|`StopOnIdleEnd`|Determines whether the task stops if the idle condition ends before the task completes. Allowed values are _true_ and _false_. Defaults to _true_.|
+|`RestartOnIdle`|Determines whether the task restarts the next time the computer becomes idle, if it was stopped because the idle condition ended. Allowed values are _true_ and _false_. Defaults to _false_.|
 
 _Schedules_ is a list of dictionaries. Each dictionary should contain a `WeekDay`, `StartTime`, and `RandomDelay` value in seconds. Example:
 ```json
@@ -234,12 +230,12 @@ _OnceDateTime_ is a dictionary containing one date/time trigger definition:
 You can define your JSON in any text editor and save it as a file, for example [`OZOTaskScheduler-ScheduledTask-Example.json`](OZOTaskScheduler-ScheduledTask-Example.json) and [`OZOTaskScheduler-AtLogonTask-Example.json`](OZOTaskScheduler-AtLogonTask-Example.json), then convert the file to a compressed JSON string with:
 ```powershell
 Convert-OZOJsonFileToString -Path C:\Temp\OZOTaskScheduler-ScheduledTask-Example.json
-{"Name":"Example Scheduled Task","Script":"C:\\Temp\\OZOTaskScheduler-ScheduledTask-Example.ps1","Parameters":"","Directory":"C:\\Temp","Disabled":true,"Settings":{"AllowDemandStart":true,"AllowHardTerminate":true,"AllowStartOnRemoteAppSession":true,"AllowStartOnRemoteAppSessionOnly":false,"Compatibility":"Win8","DeleteExpiredTaskAfter":"PT0S","DisallowStartIfOnBatteries":false,"DontStopIfGoingOnBatteries":true,"ExecutionTimeLimit":"PT0S","Hidden":false,"IdleSettings":{"StopOnIdleEnd":false,"RestartOnIdle":false},"MultipleInstances":"IgnoreNew","Priority":"Normal","RunOnlyIfNetworkAvailable":false,"WakeToRun":false},"AtLogon":false,"AtReboot":true,"Once":true,"OnceDateTime":{"DateTime":"2026-09-01T09:00:00","RandomDelay":0},"Scheduled":true,"Schedules":[{"WeekDay":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Friday","StartTime":"8:00 AM","RandomDelay":0}]}
+{"Name":"Example Scheduled Task","Script":"C:\\Temp\\OZOTaskScheduler-ScheduledTask-Example.ps1","Parameters":"","Directory":"C:\\Temp","Disabled":true,"Settings":{"AllowDemandStart":true,"AllowHardTerminate":true,"AllowStartOnRemoteAppSession":true,"Compatibility":"Win8","DeleteExpiredTaskAfter":"PT0S","DisallowStartIfOnBatteries":false,"DontStopIfGoingOnBatteries":true,"ExecutionTimeLimit":"PT0S","Hidden":false,"IdleSettings":{"StopOnIdleEnd":false,"RestartOnIdle":false},"MultipleInstances":"IgnoreNew","Priority":"Normal","RunOnlyIfNetworkAvailable":false,"WakeToRun":false},"AtLogon":false,"AtReboot":true,"Once":true,"OnceDateTime":{"DateTime":"2026-09-01T09:00:00","RandomDelay":0},"Scheduled":true,"Schedules":[{"WeekDay":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Friday","StartTime":"8:00 AM","RandomDelay":0}]}
 ```
 
 Encapsulate the resulting compressed JSON in single quotes (`'`) so it can be passed as a single string value for _JsonString_:
 ```powershell
-'{"Name":"Example Scheduled Task","Script":"C:\\Temp\\OZOTaskScheduler-ScheduledTask-Example.ps1","Parameters":"","Directory":"C:\\Temp","Disabled":true,"Settings":{"AllowDemandStart":true,"AllowHardTerminate":true,"AllowStartOnRemoteAppSession":true,"AllowStartOnRemoteAppSessionOnly":false,"Compatibility":"Win8","DeleteExpiredTaskAfter":"PT0S","DisallowStartIfOnBatteries":false,"DontStopIfGoingOnBatteries":true,"ExecutionTimeLimit":"PT0S","Hidden":false,"IdleSettings":{"StopOnIdleEnd":false,"RestartOnIdle":false},"MultipleInstances":"IgnoreNew","Priority":"Normal","RunOnlyIfNetworkAvailable":false,"WakeToRun":false},"AtLogon":false,"AtReboot":true,"Once":true,"OnceDateTime":{"DateTime":"2026-09-01T09:00:00","RandomDelay":0},"Scheduled":true,"Schedules":[{"WeekDay":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Friday","StartTime":"8:00 AM","RandomDelay":0}]}'
+'{"Name":"Example Scheduled Task","Script":"C:\\Temp\\OZOTaskScheduler-ScheduledTask-Example.ps1","Parameters":"","Directory":"C:\\Temp","Disabled":true,"Settings":{"AllowDemandStart":true,"AllowHardTerminate":true,"AllowStartOnRemoteAppSession":true,"Compatibility":"Win8","DeleteExpiredTaskAfter":"PT0S","DisallowStartIfOnBatteries":false,"DontStopIfGoingOnBatteries":true,"ExecutionTimeLimit":"PT0S","Hidden":false,"IdleSettings":{"StopOnIdleEnd":false,"RestartOnIdle":false},"MultipleInstances":"IgnoreNew","Priority":"Normal","RunOnlyIfNetworkAvailable":false,"WakeToRun":false},"AtLogon":false,"AtReboot":true,"Once":true,"OnceDateTime":{"DateTime":"2026-09-01T09:00:00","RandomDelay":0},"Scheduled":true,"Schedules":[{"WeekDay":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Friday","StartTime":"8:00 AM","RandomDelay":0}]}'
 ```
 
 ## Examples
@@ -249,7 +245,7 @@ Set-OZOScheduledTask -JsonFile "C:\Temp\OZOTaskScheduler-ScheduledTask-Example.j
 ```
 ### Example 2
 ```powershell
-Set-OZOScheduledTask -JsonString '{"Name":"Example Scheduled Task","Script":"C:\\Temp\\OZOTaskScheduler-ScheduledTask-Example.ps1","Parameters":"","Directory":"C:\\Temp","Disabled":true,"Settings":{"AllowDemandStart":true,"AllowHardTerminate":true,"AllowStartOnRemoteAppSession":true,"AllowStartOnRemoteAppSessionOnly":false,"Compatibility":"Win8","DeleteExpiredTaskAfter":"PT0S","DisallowStartIfOnBatteries":false,"DontStopIfGoingOnBatteries":true,"ExecutionTimeLimit":"PT0S","Hidden":false,"IdleSettings":{"StopOnIdleEnd":false,"RestartOnIdle":false},"MultipleInstances":"IgnoreNew","Priority":"Normal","RunOnlyIfNetworkAvailable":false,"WakeToRun":false},"AtLogon":false,"AtReboot":true,"Once":true,"OnceDateTime":{"DateTime":"2026-09-01T09:00:00","RandomDelay":0},"Scheduled":true,"Schedules":[{"WeekDay":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Friday","StartTime":"8:00 AM","RandomDelay":0}]}'
+Set-OZOScheduledTask -JsonString '{"Name":"Example Scheduled Task","Script":"C:\\Temp\\OZOTaskScheduler-ScheduledTask-Example.ps1","Parameters":"","Directory":"C:\\Temp","Disabled":true,"Settings":{"AllowDemandStart":true,"AllowHardTerminate":true,"AllowStartOnRemoteAppSession":true,"Compatibility":"Win8","DeleteExpiredTaskAfter":"PT0S","DisallowStartIfOnBatteries":false,"DontStopIfGoingOnBatteries":true,"ExecutionTimeLimit":"PT0S","Hidden":false,"IdleSettings":{"StopOnIdleEnd":false,"RestartOnIdle":false},"MultipleInstances":"IgnoreNew","Priority":"Normal","RunOnlyIfNetworkAvailable":false,"WakeToRun":false},"AtLogon":false,"AtReboot":true,"Once":true,"OnceDateTime":{"DateTime":"2026-09-01T09:00:00","RandomDelay":0},"Scheduled":true,"Schedules":[{"WeekDay":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Friday","StartTime":"8:00 AM","RandomDelay":0}]}'
 ```
 
 ## See Also

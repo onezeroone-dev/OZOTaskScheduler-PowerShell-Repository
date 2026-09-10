@@ -40,3 +40,5 @@ This module is licensed under the [GNU General Public License (GPL) version 2.0]
 
 ## Acknowledgements
 Special thanks to my employer, [Sonic Healthcare USA](https://sonichealthcareusa.com), who supports the growth of my PowerShell skillset and enables me to contribute portions of my work product to the PowerShell community.
+
+Thanks also to GitHub Copilot (Claude Sonnet 5), a co-author of this module, for pairing on design reviews, the `Once`/`Settings` feature work, `GetExistingTask()`, and the integration test suite.
