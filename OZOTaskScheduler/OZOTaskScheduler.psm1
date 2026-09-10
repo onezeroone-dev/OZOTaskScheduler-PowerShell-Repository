@@ -951,5 +951,5 @@ Export-ModuleMember -Function `
     Export-OZOScheduledTask,
     Get-OZOScheduledTask,
     New-OZOScheduledTask,
-    Set-OZOScheduledTask,
-    Remove-OZOScheduledTask
+    Remove-OZOScheduledTask,
+    Set-OZOScheduledTask
