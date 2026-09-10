@@ -731,7 +731,7 @@ Function Disable-OZOScheduledTask {
     # Parameters
     [CmdLetBinding(SupportsShouldProcess=$true)] Param (
         [Parameter(Mandatory=$true,HelpMessage="The task to disable")][String]$TaskName,
-        [Parameter(HelpMessage="Return the disabled task")][Switch]$PassThru
+        [Parameter(Mandatory=$false,HelpMessage="Return the disabled task")][Switch]$PassThru
     )
     # Get the task
     [PSCustomObject] $ozoGetScheduledTask = (Get-OZOScheduledTask -TaskName $TaskName)
@@ -767,7 +767,7 @@ Function Enable-OZOScheduledTask {
     # Parameters
     [CmdLetBinding(SupportsShouldProcess=$true)] Param (
         [Parameter(Mandatory=$true,HelpMessage="The task to enable")][String] $TaskName,
-        [Parameter(HelpMessage="Return the enabled task")][Switch]$PassThru
+        [Parameter(Mandatory=$false,HelpMessage="Return the enabled task")][Switch]$PassThru
     )
     # Get the task
     [PSCustomObject] $ozoGetScheduledTask = (Get-OZOScheduledTask -TaskName $TaskName)
@@ -859,7 +859,7 @@ Function New-OZOScheduledTask {
     [CmdLetBinding(SupportsShouldProcess=$true)]Param (
         [Parameter(Mandatory=$true,HelpMessage="A JSON file that defines a task to schedule",ParameterSetName="JsonFile")][String]$JsonFile,
         [Parameter(Mandatory=$true,HelpMessage="A compressed JSON string that defines a task to schedule",ParameterSetName="JsonString")][String]$JsonString,
-        [Parameter(HelpMessage="Return the created task")][Switch]$PassThru
+        [Parameter(Mandatory=$false,HelpMessage="Return the created task")][Switch]$PassThru
     )
     # Instantiate an OZOJsonTask object
     [PSCustomObject] $ozoJsonTask = ([OZOJsonTask]::new($JsonFile,$JsonString))
@@ -899,7 +899,7 @@ Function Set-OZOScheduledTask {
     [CmdLetBinding(SupportsShouldProcess=$true)]Param (
         [Parameter(Mandatory=$true,HelpMessage="A JSON file that defines a task to schedule",ParameterSetName="JsonFile")][String]$JsonFile,
         [Parameter(Mandatory=$true,HelpMessage="A compressed JSON string that defines a task to schedule",ParameterSetName="JsonString")][String]$JsonString,
-        [Parameter(HelpMessage="Return the updated task")][Switch]$PassThru
+        [Parameter(Mandatory=$false,HelpMessage="Return the updated task")][Switch]$PassThru
     )
     # Instantiate an OZOJsonTask object
     [PSCustomObject] $ozoJsonTask = ([OZOJsonTask]::new($JsonFile,$JsonString))
