@@ -58,8 +58,22 @@ Try {
 	New-OZOScheduledTask -JsonFile $ScheduledConfigPath
 	Assert-Condition -Condition (Test-TaskExists -TaskName $ScheduledTaskName) -Message "New-OZOScheduledTask did not create the scheduled test task."
 
+	# Verify the Settings configuration was applied to the registered task
+	$NativeTask = Get-ScheduledTask -TaskName $ScheduledTaskName
+	Assert-Condition -Condition ($NativeTask.Settings.Compatibility -eq "Win8") -Message "New-OZOScheduledTask did not apply Settings.Compatibility."
+	Assert-Condition -Condition ($NativeTask.Settings.RunOnlyIfNetworkAvailable -eq $false) -Message "New-OZOScheduledTask did not apply Settings.RunOnlyIfNetworkAvailable."
+	Assert-Condition -Condition ($NativeTask.Settings.DisallowStartIfOnBatteries -eq $false) -Message "New-OZOScheduledTask did not apply Settings.DisallowStartIfOnBatteries."
+	Assert-Condition -Condition ($NativeTask.Settings.StopIfGoingOnBatteries -eq $false) -Message "New-OZOScheduledTask did not apply Settings.DontStopIfGoingOnBatteries."
+	Assert-Condition -Condition ($NativeTask.Settings.ExecutionTimeLimit -eq "PT0S") -Message "New-OZOScheduledTask did not apply Settings.ExecutionTimeLimit."
+	Assert-Condition -Condition ($NativeTask.Settings.DeleteExpiredTaskAfter -eq "PT0S") -Message "New-OZOScheduledTask did not apply Settings.DeleteExpiredTaskAfter."
+	Assert-Condition -Condition ($NativeTask.Settings.IdleSettings.StopOnIdleEnd -eq $false) -Message "New-OZOScheduledTask did not apply Settings.IdleSettings.StopOnIdleEnd."
+	Assert-Condition -Condition ($NativeTask.Settings.MultipleInstances -eq "IgnoreNew") -Message "New-OZOScheduledTask did not apply Settings.MultipleInstances."
+	Assert-Condition -Condition ($NativeTask.Settings.Priority -eq 7) -Message "New-OZOScheduledTask did not apply Settings.Priority."
+
 	$ScheduledTask = Get-OZOScheduledTask -TaskName $ScheduledTaskName
 	Assert-Condition -Condition ($ScheduledTask.Name -eq $ScheduledTaskName) -Message "Get-OZOScheduledTask did not return the scheduled test task."
+	Assert-Condition -Condition ($ScheduledTask.Settings.RunOnlyIfNetworkAvailable -eq $false) -Message "Get-OZOScheduledTask did not populate Settings.RunOnlyIfNetworkAvailable."
+	Assert-Condition -Condition ($ScheduledTask.Settings.IdleSettings.StopOnIdleEnd -eq $false) -Message "Get-OZOScheduledTask did not populate Settings.IdleSettings.StopOnIdleEnd."
 
 	Enable-OZOScheduledTask -TaskName $ScheduledTaskName
 	Assert-Condition -Condition ((Get-ScheduledTask -TaskName $ScheduledTaskName).Settings.Enabled -eq $true) -Message "Enable-OZOScheduledTask did not enable the scheduled test task."
@@ -69,7 +83,9 @@ Try {
 
 	Export-OZOScheduledTask -TaskName $ScheduledTaskName -OutFile $ExportPath
 	Assert-Condition -Condition (Test-Path -Path $ExportPath) -Message "Export-OZOScheduledTask did not create the export file."
-	Get-Content -Path $ExportPath -Raw | ConvertFrom-Json -ErrorAction Stop | Out-Null
+	$ExportedConfig = Get-Content -Path $ExportPath -Raw | ConvertFrom-Json -ErrorAction Stop
+	Assert-Condition -Condition ($ExportedConfig.Settings.Compatibility -eq "Win8") -Message "Export-OZOScheduledTask did not include Settings.Compatibility."
+	Assert-Condition -Condition ($ExportedConfig.Settings.ExecutionTimeLimit -eq "PT0S") -Message "Export-OZOScheduledTask did not include Settings.ExecutionTimeLimit."
 
 	Set-OZOScheduledTask -JsonFile $ScheduledConfigPath
 	Assert-Condition -Condition (Test-TaskExists -TaskName $ScheduledTaskName) -Message "Set-OZOScheduledTask did not recreate the scheduled test task."

@@ -109,6 +109,7 @@ Class OZOTask {
     [String] $User       = $null
     # PROPERTIES: String Lists
     Hidden [System.Collections.Generic.List[String]] $Compatibilities = @("At","V1","Vista","Win7","Win8")
+    Hidden [System.Collections.Generic.List[String]] $MultipleInstancesValues = @("IgnoreNew","Parallel","Queue")
     # METHODS: Constructor method - Disable, Enable, Export, Get, Remove
     OZOTask([String]$Name) {
         # Set Properties
@@ -218,6 +219,12 @@ Class OZOTask {
                 # Compatibility is not found in Compatibilities
                 $this.Settings.Compatibility = "Win8"
             }
+            # Determine if MultipleInstances is set and not found in MultipleInstancesValues
+            If ([String]::IsNullOrEmpty($this.Settings.MultipleInstances) -eq $false -And $this.MultipleInstancesValues -NotContains $this.Settings.MultipleInstances) {
+                # MultipleInstances is set to an unsupported value; log a warning and clear it so the Task Scheduler default is used
+                $this.ozoLogger.Write(($this.Name + " Settings.MultipleInstances value '" + $this.Settings.MultipleInstances + "' is not supported and will be ignored."), "Warning")
+                $this.Settings.MultipleInstances = $null
+            }
             # Determine if Directory is null or empty
             If ([String]::IsNullOrEmpty($this.Directory)) {
                 # Directory is null or empty
@@ -249,7 +256,23 @@ Class OZOTask {
             $this.Disabled = -Not [Boolean]$ScheduledTask.Settings.Enabled
             # Populate Settings
             $this.Settings = [PSCustomObject]@{
-                Compatibility = [String]$ScheduledTask.Settings.Compatibility
+                AllowDemandStart             = [Boolean]$ScheduledTask.Settings.AllowDemandStart
+                AllowHardTerminate           = [Boolean]$ScheduledTask.Settings.AllowHardTerminate
+                AllowStartOnRemoteAppSession = -Not [Boolean]$ScheduledTask.Settings.DisallowStartOnRemoteAppSession
+                Compatibility                = [String]$ScheduledTask.Settings.Compatibility
+                DeleteExpiredTaskAfter       = [String]$ScheduledTask.Settings.DeleteExpiredTaskAfter
+                DisallowStartIfOnBatteries   = [Boolean]$ScheduledTask.Settings.DisallowStartIfOnBatteries
+                DontStopIfGoingOnBatteries   = -Not [Boolean]$ScheduledTask.Settings.StopIfGoingOnBatteries
+                ExecutionTimeLimit           = [String]$ScheduledTask.Settings.ExecutionTimeLimit
+                Hidden                       = [Boolean]$ScheduledTask.Settings.Hidden
+                IdleSettings                 = [PSCustomObject]@{
+                    StopOnIdleEnd = [Boolean]$ScheduledTask.Settings.IdleSettings.StopOnIdleEnd
+                    RestartOnIdle = [Boolean]$ScheduledTask.Settings.IdleSettings.RestartOnIdle
+                }
+                MultipleInstances         = [String]$ScheduledTask.Settings.MultipleInstances
+                Priority                  = [Int32]$ScheduledTask.Settings.Priority
+                RunOnlyIfNetworkAvailable = [Boolean]$ScheduledTask.Settings.RunOnlyIfNetworkAvailable
+                WakeToRun                 = [Boolean]$ScheduledTask.Settings.WakeToRun
             }
             # Populate User
             #$this.User = [String]$ScheduledTask.Principal.UserId
@@ -360,6 +383,107 @@ Class OZOTask {
             $this.ozoLogger.Write(("Failed to get the " + $this.Name + " task with error " + $_ + "."), "Error")
         }
     }
+    # METHODS: Priority value method
+    Hidden [Int32] GetPriorityValue() {
+        # Control variable
+        [Int32] $Priority = 7
+        [Int32] $ParsedPriority = 0
+        # Determine if Priority can be parsed as an integer
+        If ([Int32]::TryParse([String]$this.Settings.Priority, [ref]$ParsedPriority) -eq $true) {
+            # Priority is an integer; use it
+            $Priority = $ParsedPriority
+        # ElseIf determine if Priority is the friendly value "Normal"
+        } ElseIf ([String]$this.Settings.Priority -eq "Normal") {
+            # Priority is "Normal"; use the default value
+            $Priority = 7
+        # ElseIf determine if Priority is set to an unrecognized value
+        } ElseIf ($null -ne $this.Settings.Priority) {
+            # Priority is set to an unrecognized value; log a warning and use the default value
+            $this.ozoLogger.Write(($this.Name + " Settings.Priority value '" + $this.Settings.Priority + "' is not recognized; using 7."), "Warning")
+        }
+        # Determine if Priority is outside of the supported range
+        If ($Priority -lt 0 -Or $Priority -gt 10) {
+            # Priority is outside of the supported range; log a warning and use the default value
+            $this.ozoLogger.Write(($this.Name + " Settings.Priority value " + $Priority + " is outside the supported range (0-10); using 7."), "Warning")
+            $Priority = 7
+        }
+        # Return
+        return $Priority
+    }
+    # METHODS: Settings parameters method
+    Hidden [Hashtable] GetSettingsParameters() {
+        # Control variable
+        [Hashtable] $SettingsParameters = @{
+            Compatibility      = $this.Settings.Compatibility
+            StartWhenAvailable = $true
+        }
+        # Determine if AllowDemandStart is false
+        If ($this.Settings.AllowDemandStart -eq $false) {
+            $SettingsParameters.DisallowDemandStart = $true
+        }
+        # Determine if AllowHardTerminate is false
+        If ($this.Settings.AllowHardTerminate -eq $false) {
+            $SettingsParameters.DisallowHardTerminate = $true
+        }
+        # Determine if AllowStartOnRemoteAppSession is false
+        If ($this.Settings.AllowStartOnRemoteAppSession -eq $false) {
+            $SettingsParameters.DisallowStartOnRemoteAppSession = $true
+        }
+        # Determine if DeleteExpiredTaskAfter is set
+        If ([String]::IsNullOrEmpty($this.Settings.DeleteExpiredTaskAfter) -eq $false) {
+            Try {
+                $SettingsParameters.DeleteExpiredTaskAfter = [System.Xml.XmlConvert]::ToTimeSpan([String]$this.Settings.DeleteExpiredTaskAfter)
+            } Catch {
+                $this.ozoLogger.Write(($this.Name + " Settings.DeleteExpiredTaskAfter value '" + $this.Settings.DeleteExpiredTaskAfter + "' is not a valid duration and will be ignored."), "Warning")
+            }
+        }
+        # Determine if DisallowStartIfOnBatteries is false
+        If ($this.Settings.DisallowStartIfOnBatteries -eq $false) {
+            $SettingsParameters.AllowStartIfOnBatteries = $true
+        }
+        # Determine if DontStopIfGoingOnBatteries is true
+        If ($this.Settings.DontStopIfGoingOnBatteries -eq $true) {
+            $SettingsParameters.DontStopIfGoingOnBatteries = $true
+        }
+        # Determine if ExecutionTimeLimit is set
+        If ([String]::IsNullOrEmpty($this.Settings.ExecutionTimeLimit) -eq $false) {
+            Try {
+                $SettingsParameters.ExecutionTimeLimit = [System.Xml.XmlConvert]::ToTimeSpan([String]$this.Settings.ExecutionTimeLimit)
+            } Catch {
+                $this.ozoLogger.Write(($this.Name + " Settings.ExecutionTimeLimit value '" + $this.Settings.ExecutionTimeLimit + "' is not a valid duration and will be ignored."), "Warning")
+            }
+        }
+        # Determine if Hidden is true
+        If ($this.Settings.Hidden -eq $true) {
+            $SettingsParameters.Hidden = $true
+        }
+        # Determine if IdleSettings.StopOnIdleEnd is false
+        If ($null -ne $this.Settings.IdleSettings -And $this.Settings.IdleSettings.StopOnIdleEnd -eq $false) {
+            $SettingsParameters.DontStopOnIdleEnd = $true
+        }
+        # Determine if IdleSettings.RestartOnIdle is true
+        If ($null -ne $this.Settings.IdleSettings -And $this.Settings.IdleSettings.RestartOnIdle -eq $true) {
+            $SettingsParameters.RestartOnIdle = $true
+        }
+        # Determine if MultipleInstances is set
+        If ([String]::IsNullOrEmpty($this.Settings.MultipleInstances) -eq $false) {
+            $SettingsParameters.MultipleInstances = $this.Settings.MultipleInstances
+        }
+        # Determine if Priority is set
+        If ($null -ne $this.Settings.Priority) {
+            $SettingsParameters.Priority = $this.GetPriorityValue()
+        }
+        # Determine if RunOnlyIfNetworkAvailable is true
+        If ($this.Settings.RunOnlyIfNetworkAvailable -eq $true) {
+            $SettingsParameters.RunOnlyIfNetworkAvailable = $true
+        }
+        # Determine if WakeToRun is true
+        If ($this.Settings.WakeToRun -eq $true) {
+            $SettingsParameters.WakeToRun = $true
+        }
+        # Return
+        return $SettingsParameters
+    }
     # METHODS: AddTask method
     [Void] AddTask() {
         # Local variables
@@ -387,22 +511,12 @@ Class OZOTask {
                 }
             }
             ## SETTINGS PARAMETERS
+            # Build settings parameters from the Settings configuration
+            $settingsParameters = $this.GetSettingsParameters()
             # Determine if Disabled is set
             If ($this.Disabled -eq $true) {
-                # Disabled is set; set parameters for New-ScheduledTaskSettingsSet with the Disabled parameter
-                $settingsParameters = @{
-                    RunOnlyIfNetworkAvailable = $true
-                    Compatibility             = $this.Settings.Compatibility
-                    StartWhenAvailable        = $true
-                    Disable                   = $true
-                }
-            } Else {
-                # Disabled is not set; set parameters for New-ScheduledTaskSettingsSet without the Disabled parameter
-                $settingsParameters = @{
-                    RunOnlyIfNetworkAvailable = $true
-                    Compatibility             = $this.Settings.Compatibility
-                    StartWhenAvailable        = $true
-                }
+                # Disabled is set; add the Disable parameter
+                $settingsParameters.Disable = $true
             }
             ## TRIGGERS AND SCHEDULED TASK PARAMETERS
             # Determine if at least one of Scheduled, Once, or AtReboot is true
@@ -797,4 +911,3 @@ Export-ModuleMember -Function `
     New-OZOScheduledTask,
     Set-OZOScheduledTask,
     Remove-OZOScheduledTask
-
