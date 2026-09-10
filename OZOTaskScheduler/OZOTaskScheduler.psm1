@@ -721,21 +721,31 @@ Function Disable-OZOScheduledTask {
         Disables a task, if found.
         .PARAMETER TaskName
         The name of the task to disable.
+        .PARAMETER PassThru
+        Return the disabled task.
         .EXAMPLE
         Disable-OZOScheduledTask -TaskName "Update OZO PowerShell Module"
         .LINK
         https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Disable-OZOScheduledTask.md
     #>
     # Parameters
-    [CmdLetBinding()] Param (
-        [Parameter(Mandatory=$true,HelpMessage="The task to disable")][String]$TaskName
+    [CmdLetBinding(SupportsShouldProcess=$true)] Param (
+        [Parameter(Mandatory=$true,HelpMessage="The task to disable")][String]$TaskName,
+        [Parameter(HelpMessage="Return the disabled task")][Switch]$PassThru
     )
     # Get the task
     [PSCustomObject] $ozoGetScheduledTask = (Get-OZOScheduledTask -TaskName $TaskName)
     # Determine if the task is not null
     if ($null -ne $ozoGetScheduledTask -And $null -ne $ozoGetScheduledTask.Task) {
         # Task is not null; call DisableTask to disable the task
-        $ozoGetScheduledTask.DisableTask()
+        If ($PSCmdlet.ShouldProcess($TaskName, "Disable scheduled task")) {
+            $ozoGetScheduledTask.DisableTask()
+            # Determine if PassThru is set
+            If ($PassThru.IsPresent -eq $true) {
+                # PassThru is set; return the disabled task
+                $PSCmdlet.WriteObject((Get-OZOScheduledTask -TaskName $TaskName))
+            }
+        }
     }
 }
 # Enable-OZOScheduledTask function
@@ -747,21 +757,31 @@ Function Enable-OZOScheduledTask {
         Enable a task, if found.
         .PARAMETER TaskName
         The name of the task to enable.
+        .PARAMETER PassThru
+        Return the enabled task.
         .EXAMPLE
         Enable-OZOScheduledTask -TaskName "Update OZO PowerShell Module"
         .LINK
         https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Enable-OZOScheduledTask.md
     #>
     # Parameters
-    [CmdLetBinding()] Param (
-        [Parameter(Mandatory=$true,HelpMessage="The task to enable")][String] $TaskName
+    [CmdLetBinding(SupportsShouldProcess=$true)] Param (
+        [Parameter(Mandatory=$true,HelpMessage="The task to enable")][String] $TaskName,
+        [Parameter(HelpMessage="Return the enabled task")][Switch]$PassThru
     )
     # Get the task
     [PSCustomObject] $ozoGetScheduledTask = (Get-OZOScheduledTask -TaskName $TaskName)
     # Determine if the task is not null
     If ($null -ne $ozoGetScheduledTask -And $null -ne $ozoGetScheduledTask.Task) {
         # Task is not null; call EnableTask to enable the task
-        $ozoGetScheduledTask.EnableTask()
+        If ($PSCmdlet.ShouldProcess($TaskName, "Enable scheduled task")) {
+            $ozoGetScheduledTask.EnableTask()
+            # Determine if PassThru is set
+            If ($PassThru.IsPresent -eq $true) {
+                # PassThru is set; return the enabled task
+                $PSCmdlet.WriteObject((Get-OZOScheduledTask -TaskName $TaskName))
+            }
+        }
     }
 }
 # Export-OZOScheduledTask function
@@ -781,7 +801,7 @@ Function Export-OZOScheduledTask {
         https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Export-OZOScheduledTask.md
     #>
     # Parameters
-    [CmdLetBinding()] Param (
+    [CmdLetBinding(SupportsShouldProcess=$true)] Param (
         [Parameter(Mandatory=$true,HelpMessage="The path for the output JSON file")][String]$OutFile,
         [Parameter(Mandatory=$true,HelpMessage="The task to export")][String]$TaskName
     )
@@ -790,7 +810,9 @@ Function Export-OZOScheduledTask {
     # Determine if the task is not null
     If ($null -ne $ozoGetScheduledTask -And $null -ne $ozoGetScheduledTask.Task) {
         # Task is not null; export all properties except Compatibilities as Json to a file
-        $ozoGetScheduledTask | Select-Object -Property Name,Script,Parameters,Directory,Disabled,Settings,AtLogon,AtReboot,Once,OnceDateTime,Scheduled,@{Name="Schedules";Expression={$_.OZOSchedules | Select-Object -Property Weekday,StartTime,RandomDelay}} | ConvertTo-Json | Out-File -Path $OutFile
+        If ($PSCmdlet.ShouldProcess($OutFile, ("Export scheduled task '" + $TaskName + "'"))) {
+            $ozoGetScheduledTask | Select-Object -Property Name,Script,Parameters,Directory,Disabled,Settings,AtLogon,AtReboot,Once,OnceDateTime,Scheduled,@{Name="Schedules";Expression={$_.OZOSchedules | Select-Object -Property Weekday,StartTime,RandomDelay}} | ConvertTo-Json | Out-File -Path $OutFile
+        }
     }
 }
 # Get-OZOScheduledTask function
@@ -825,24 +847,33 @@ Function New-OZOScheduledTask {
         A JSON file that defines a task to schedule.
         .PARAMETER JsonString
         A compressed JSON string that defines a task to schedule.
+        .PARAMETER PassThru
+        Return the created task.
         .EXAMPLE
         New-OZOScheduledTask -JsonFile "C:\Temp\OZOTaskScheduler-ScheduledTask-Example.json"
         .EXAMPLE
-        New-OZOScheduledTask -JsonString {"Name":"Example Scheduled Task","Script":"C:\\Temp\\OZOTaskScheduler-ScheduledTask-Example.ps1","Parameters":"","Directory":"C:\\Temp","Disabled":true,"Settings":{"AllowDemandStart":true,"AllowHardTerminate":true,"AllowStartOnRemoteAppSession":true,"Compatibility":"Win8","DeleteExpiredTaskAfter":"PT0S","DisallowStartIfOnBatteries":false,"DontStopIfGoingOnBatteries":true,"ExecutionTimeLimit":"PT0S","Hidden":false,"IdleSettings":{"StopOnIdleEnd":false,"RestartOnIdle":false},"MultipleInstances":"IgnoreNew","Priority":"Normal","RunOnlyIfNetworkAvailable":false,"WakeToRun":false},"AtLogon":false,"AtReboot":true,"Once":true,"OnceDateTime":{"DateTime":"2026-09-01T09:00:00","RandomDelay":0},"Scheduled":true,"Schedules":[{"WeekDay":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Friday","StartTime":"8:00 AM","RandomDelay":0}]}
+        New-OZOScheduledTask -JsonString '{"Name":"Example Scheduled Task","Script":"C:\\Temp\\OZOTaskScheduler-ScheduledTask-Example.ps1","Parameters":"","Directory":"C:\\Temp","Disabled":true,"Settings":{"AllowDemandStart":true,"AllowHardTerminate":true,"AllowStartOnRemoteAppSession":true,"Compatibility":"Win8","DeleteExpiredTaskAfter":"PT0S","DisallowStartIfOnBatteries":false,"DontStopIfGoingOnBatteries":true,"ExecutionTimeLimit":"PT0S","Hidden":false,"IdleSettings":{"StopOnIdleEnd":false,"RestartOnIdle":false},"MultipleInstances":"IgnoreNew","Priority":"Normal","RunOnlyIfNetworkAvailable":false,"WakeToRun":false},"AtLogon":false,"AtReboot":true,"Once":true,"OnceDateTime":{"DateTime":"2026-09-01T09:00:00","RandomDelay":0},"Scheduled":true,"Schedules":[{"WeekDay":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Friday","StartTime":"8:00 AM","RandomDelay":0}]}'
         .LINK
         https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/New-OZOScheduledTask.md
     #>
-    [CmdLetBinding()]Param (
+    [CmdLetBinding(SupportsShouldProcess=$true)]Param (
         [Parameter(Mandatory=$true,HelpMessage="A JSON file that defines a task to schedule",ParameterSetName="JsonFile")][String]$JsonFile,
-        [Parameter(Mandatory=$true,HelpMessage="A compressed JSON string that defines a task to schedule",ParameterSetName="JsonString")][String]$JsonString
-
+        [Parameter(Mandatory=$true,HelpMessage="A compressed JSON string that defines a task to schedule",ParameterSetName="JsonString")][String]$JsonString,
+        [Parameter(HelpMessage="Return the created task")][Switch]$PassThru
     )
     # Instantiate an OZOJsonTask object
     [PSCustomObject] $ozoJsonTask = ([OZOJsonTask]::new($JsonFile,$JsonString))
     # Determine if the task does not exist and validates
     If ($null -ne $ozoJsonTask -And $null -ne $ozoJsonTask.Task -And $ozoJsonTask.Task.Exists() -eq $false -And $ozoJsonTask.Task.Validates() -eq $true) {
         # Task does not exiust and validates; add it
-        $ozoJsonTask.Task.AddTask()
+        If ($PSCmdlet.ShouldProcess($ozoJsonTask.Task.Name, "Create scheduled task")) {
+            $ozoJsonTask.Task.AddTask()
+            # Determine if PassThru is set
+            If ($PassThru.IsPresent -eq $true) {
+                # PassThru is set; return the created task
+                $PSCmdlet.WriteObject((Get-OZOScheduledTask -TaskName $ozoJsonTask.Task.Name))
+            }
+        }
     }
 }
 # Set-OZOScheduledTask function
@@ -856,24 +887,33 @@ Function Set-OZOScheduledTask {
         A JSON file that defines a task to schedule
         .PARAMETER JsonString
         A compressed JSON string that defines a task to schedule
+        .PARAMETER PassThru
+        Return the updated task.
         .EXAMPLE
         Set-OZOScheduledTask -JsonFile "C:\Temp\OZOTaskScheduler-ScheduledTask-Example.json"
         .EXAMPLE
-        Set-OZOScheduledTask -JsonString {"Name":"Example Scheduled Task","Script":"C:\\Temp\\OZOTaskScheduler-ScheduledTask-Example.ps1","Parameters":"","Directory":"C:\\Temp","Disabled":true,"Settings":{"AllowDemandStart":true,"AllowHardTerminate":true,"AllowStartOnRemoteAppSession":true,"Compatibility":"Win8","DeleteExpiredTaskAfter":"PT0S","DisallowStartIfOnBatteries":false,"DontStopIfGoingOnBatteries":true,"ExecutionTimeLimit":"PT0S","Hidden":false,"IdleSettings":{"StopOnIdleEnd":false,"RestartOnIdle":false},"MultipleInstances":"IgnoreNew","Priority":"Normal","RunOnlyIfNetworkAvailable":false,"WakeToRun":false},"AtLogon":false,"AtReboot":true,"Once":true,"OnceDateTime":{"DateTime":"2026-09-01T09:00:00","RandomDelay":0},"Scheduled":true,"Schedules":[{"WeekDay":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Friday","StartTime":"8:00 AM","RandomDelay":0}]}
+        Set-OZOScheduledTask -JsonString '{"Name":"Example Scheduled Task","Script":"C:\\Temp\\OZOTaskScheduler-ScheduledTask-Example.ps1","Parameters":"","Directory":"C:\\Temp","Disabled":true,"Settings":{"AllowDemandStart":true,"AllowHardTerminate":true,"AllowStartOnRemoteAppSession":true,"Compatibility":"Win8","DeleteExpiredTaskAfter":"PT0S","DisallowStartIfOnBatteries":false,"DontStopIfGoingOnBatteries":true,"ExecutionTimeLimit":"PT0S","Hidden":false,"IdleSettings":{"StopOnIdleEnd":false,"RestartOnIdle":false},"MultipleInstances":"IgnoreNew","Priority":"Normal","RunOnlyIfNetworkAvailable":false,"WakeToRun":false},"AtLogon":false,"AtReboot":true,"Once":true,"OnceDateTime":{"DateTime":"2026-09-01T09:00:00","RandomDelay":0},"Scheduled":true,"Schedules":[{"WeekDay":"Monday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Wednesday","StartTime":"8:00 AM","RandomDelay":0},{"WeekDay":"Friday","StartTime":"8:00 AM","RandomDelay":0}]}'
         .LINK
         https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Set-OZOScheduledTask.md
     #>
-    [CmdLetBinding()]Param (
+    [CmdLetBinding(SupportsShouldProcess=$true)]Param (
         [Parameter(Mandatory=$true,HelpMessage="A JSON file that defines a task to schedule",ParameterSetName="JsonFile")][String]$JsonFile,
-        [Parameter(Mandatory=$true,HelpMessage="A compressed JSON string that defines a task to schedule",ParameterSetName="JsonString")][String]$JsonString
-
+        [Parameter(Mandatory=$true,HelpMessage="A compressed JSON string that defines a task to schedule",ParameterSetName="JsonString")][String]$JsonString,
+        [Parameter(HelpMessage="Return the updated task")][Switch]$PassThru
     )
     # Instantiate an OZOJsonTask object
     [PSCustomObject] $ozoJsonTask = ([OZOJsonTask]::new($JsonFile,$JsonString))
     # Determine if the task exists and validates
     If ($null -ne $ozoJsonTask -And $null -ne $ozoJsonTask.Task -And $ozoJsonTask.Task.Exists() -eq $true -And $ozoJsonTask.Task.Validates() -eq $true) {
         # Task exists and validates; update it
-        $ozoJsonTask.Task.UpdateTask()
+        If ($PSCmdlet.ShouldProcess($ozoJsonTask.Task.Name, "Update scheduled task")) {
+            $ozoJsonTask.Task.UpdateTask()
+            # Determine if PassThru is set
+            If ($PassThru.IsPresent -eq $true) {
+                # PassThru is set; return the updated task
+                $PSCmdlet.WriteObject((Get-OZOScheduledTask -TaskName $ozoJsonTask.Task.Name))
+            }
+        }
     }
 }
 # Remove-OZOScheduledTask function
@@ -891,7 +931,7 @@ Function Remove-OZOScheduledTask {
         https://github.com/onezeroone-dev/OZOTaskScheduler-PowerShell-Repository/blob/main/Documentation/Remove-OZOScheduledTask.md
     #>
     # Parameters
-    [CmdLetBinding()]Param (
+    [CmdLetBinding(SupportsShouldProcess=$true,ConfirmImpact="High")]Param (
         [Parameter(Mandatory=$true,HelpMessage="The name of the task to remove")][String]$TaskName
     )
     # Get the task
@@ -899,7 +939,9 @@ Function Remove-OZOScheduledTask {
     # Determine if the task is not null
     If ($null -ne $ozoGetScheduledTask -And $null -ne $ozoGetScheduledTask.Task) {
         # Task is not null; call RemoveTask to disable and remove the task
-        $ozoGetScheduledTask.RemoveTask()
+        If ($PSCmdlet.ShouldProcess($TaskName, "Remove scheduled task")) {
+            $ozoGetScheduledTask.RemoveTask()
+        }
     }
 }
 

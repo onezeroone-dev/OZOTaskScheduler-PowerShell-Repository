@@ -6,6 +6,8 @@ Updates an existing scheduled task. The module uses `powershell.exe` to run `.ps
 
 If the task already exists, it will be removed and recreated.
 
+> **Note:** Tasks created with `Scheduled`, `Once`, or `AtReboot` always run as the _SYSTEM_ account; there is currently no JSON option to specify a different account. If a task needs to run as a different user, create or update it with this module first, then change the task's principal (and supply credentials) directly in Task Scheduler or with `Set-ScheduledTask -User -Password`.
+
 ## Prerequisites
 This script requires _Administrator_ privileges.
 
@@ -15,9 +17,11 @@ This function supports two parameter sets: one for tasks defined in a JSON file 
 ```
 Set-OZOScheduledTask
     -JsonFile <string>
+    [-PassThru]
 
 Set-OZOScheduledTask
     -JsonString <String>
+    [-PassThru]
 ```
 
 ## Parameters
@@ -25,6 +29,7 @@ Set-OZOScheduledTask
 |---------|-----------|
 |`JsonFile`|The path to a JSON file that defines the task configuration.|
 |`JsonString`|A compressed JSON string that defines the task configuration.|
+|`PassThru`|Return the updated task.|
 
 ## JSON Definition
 Tasks are expressed as a JSON dictionary. The following example shows a _Scheduled_ task with three schedule entries:

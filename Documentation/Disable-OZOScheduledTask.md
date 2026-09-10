@@ -11,12 +11,14 @@ This script requires _Administrator_ privileges.
 ```
 Disable-OZOScheduledTask
     -TaskName <String>
+    [-PassThru]
 ```
 
 ## Parameters
 |Parameter|Description|
 |---------|-----------|
 |`TaskName`|The name of the task to disable.|
+|`PassThru`|Return the disabled task.|
 
 ## Examples
 ```powershell
