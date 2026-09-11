@@ -28,7 +28,7 @@ Set-OZOScheduledTask
 |Parameter|Description|
 |---------|-----------|
 |`JsonFile`|The path to a JSON file that defines the task configuration.|
-|`JsonString`|A compressed JSON string that defines the task configuration.|
+|`JsonString`|A compressed JSON string that defines the task configuration. See _Generating a Compressed JSON String_, below.|
 |`PassThru`|Return the updated task.|
 
 ## JSON Definition
