@@ -18,7 +18,7 @@ Remove-OZOScheduledTask
 |---------|-----------|
 |`TaskName`|The name of the task to remove.|
 
-## Examples
+## Example
 ```powershell
 Remove-OZOScheduledTask -TaskName "Update OZO PowerShell Module"
 ```
