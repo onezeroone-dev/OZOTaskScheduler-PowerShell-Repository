@@ -20,7 +20,7 @@ Disable-OZOScheduledTask
 |`TaskName`|The name of the task to disable.|
 |`PassThru`|Return the disabled task.|
 
-## Examples
+## Example
 ```powershell
 Disable-OZOScheduledTask -TaskName "Update OZO PowerShell Module"
 ```
