@@ -211,7 +211,23 @@ Class OZOTask {
             If ($null -eq $this.Settings) {
                 # Settings is null; set to default
                 $this.Settings = [PSCustomObject]@{
-                    Compatibility = "Win8"
+                    AllowDemandStart             = $true
+                    AllowHardTerminate           = $true
+                    AllowStartOnRemoteAppSession = $true
+                    Compatibility                = "Win8"
+                    DeleteExpiredTaskAfter       = "PT0S"
+                    DisallowStartIfOnBatteries   = $false
+                    DontStopIfGoingOnBatteries   = $true
+                    ExecutionTimeLimit           = "PT0S"
+                    Hidden                       = $false
+                    IdleSettings = [PSCustomObject]@{
+                        StopOnIdleEnd = $false
+                        RestartOnIdle = $false
+                    }
+                    MultipleInstances            = "IgnoreNew"
+                    Priority                      = "Normal"
+                    RunOnlyIfNetworkAvailable     = $false
+                    WakeToRun                     = $false
                 }
             }
             # Determine if Compatibility is not found in Compatibilities
@@ -269,34 +285,47 @@ Class OZOTask {
                     StopOnIdleEnd = [Boolean]$ScheduledTask.Settings.IdleSettings.StopOnIdleEnd
                     RestartOnIdle = [Boolean]$ScheduledTask.Settings.IdleSettings.RestartOnIdle
                 }
-                MultipleInstances         = [String]$ScheduledTask.Settings.MultipleInstances
-                Priority                  = [Int32]$ScheduledTask.Settings.Priority
-                RunOnlyIfNetworkAvailable = [Boolean]$ScheduledTask.Settings.RunOnlyIfNetworkAvailable
-                WakeToRun                 = [Boolean]$ScheduledTask.Settings.WakeToRun
+                MultipleInstances            = [String]$ScheduledTask.Settings.MultipleInstances
+                Priority                     = [Int32]$ScheduledTask.Settings.Priority
+                RunOnlyIfNetworkAvailable    = [Boolean]$ScheduledTask.Settings.RunOnlyIfNetworkAvailable
+                WakeToRun                    = [Boolean]$ScheduledTask.Settings.WakeToRun
             }
-            # Populate User
+            # Populate User (handling user will be introduced in a future update)
             #$this.User = [String]$ScheduledTask.Principal.UserId
             # Populate Actions (including Directory, Script, and Parameters)
             $Action = $ScheduledTask.Actions | Select-Object -First 1
+            # Determine if Action is not null
             If ($null -ne $Action) {
+                # Action is not null; set Directory
                 $this.Directory = [String]$Action.WorkingDirectory
+                # Determine if the action is a PowerShell
                 If ($Action.Execute -match 'powershell\.exe$') {
+                    # Action is a PowerShell executable
                     $ActionMatch = [Regex]::Match([String]$Action.Arguments, '-File\s+"(?<Script>[^"]+)"\s*(?<Parameters>.*)$')
+                    # Determine if the PowerShell action matches the expected format
                     If ($ActionMatch.Success) {
+                        # PowerShell action matches the expected format
                         $this.Script = $ActionMatch.Groups['Script'].Value
                         $this.Parameters = $ActionMatch.Groups['Parameters'].Value
                     } Else {
+                        # PowerShell action does not match the expected format
                         $this.ozoLogger.Write(($this.Name + " uses an unsupported PowerShell action format."), "Warning")
                     }
+                # Determine if the action is a CMD executable
                 } ElseIf ($Action.Execute -match 'cmd\.exe$') {
+                    # Action is a CMD executable
                     $ActionMatch = [Regex]::Match([String]$Action.Arguments, '/Q\s+/C\s+"(?<Script>[^"]+)"\s*(?<Parameters>.*)$')
+                    # Determine if the CMD action matches the expected format
                     If ($ActionMatch.Success) {
+                        # CMD action matches the expected format
                         $this.Script = $ActionMatch.Groups['Script'].Value
                         $this.Parameters = $ActionMatch.Groups['Parameters'].Value
                     } Else {
+                        # CMD action does not match the expected format
                         $this.ozoLogger.Write(($this.Name + " uses an unsupported CMD action format."), "Warning")
                     }
                 } Else {
+                    # Action is an unsupported executable
                     $this.ozoLogger.Write(($this.Name + " uses an unsupported action executable."), "Warning")
                 }
             }
@@ -385,7 +414,7 @@ Class OZOTask {
     }
     # METHODS: Priority value method
     Hidden [Int32] GetPriorityValue() {
-        # Control variable
+        # Local variables
         [Int32] $Priority = 7
         [Int32] $ParsedPriority = 0
         # Determine if Priority can be parsed as an integer
@@ -419,66 +448,84 @@ Class OZOTask {
         }
         # Determine if AllowDemandStart is false
         If ($this.Settings.AllowDemandStart -eq $false) {
+            # AllowDemandStart is false
             $SettingsParameters.DisallowDemandStart = $true
         }
         # Determine if AllowHardTerminate is false
         If ($this.Settings.AllowHardTerminate -eq $false) {
+            # AllowHardTerminate is false
             $SettingsParameters.DisallowHardTerminate = $true
         }
         # Determine if AllowStartOnRemoteAppSession is false
         If ($this.Settings.AllowStartOnRemoteAppSession -eq $false) {
+            # AllowStartOnRemoteAppSession is false
             $SettingsParameters.DisallowStartOnRemoteAppSession = $true
         }
         # Determine if DeleteExpiredTaskAfter is set
         If ([String]::IsNullOrEmpty($this.Settings.DeleteExpiredTaskAfter) -eq $false) {
+            # DeleteExpiredTaskAfter is set; Try to convert it to a TimeSpan
             Try {
                 $SettingsParameters.DeleteExpiredTaskAfter = [System.Xml.XmlConvert]::ToTimeSpan([String]$this.Settings.DeleteExpiredTaskAfter)
+                # Success
             } Catch {
+                # Failure
                 $this.ozoLogger.Write(($this.Name + " Settings.DeleteExpiredTaskAfter value '" + $this.Settings.DeleteExpiredTaskAfter + "' is not a valid duration and will be ignored."), "Warning")
             }
         }
         # Determine if DisallowStartIfOnBatteries is false
         If ($this.Settings.DisallowStartIfOnBatteries -eq $false) {
+            # DisallowStartIfOnBatteries is false
             $SettingsParameters.AllowStartIfOnBatteries = $true
         }
         # Determine if DontStopIfGoingOnBatteries is true
         If ($this.Settings.DontStopIfGoingOnBatteries -eq $true) {
+            # DontStopIfGoingOnBatteries is true
             $SettingsParameters.DontStopIfGoingOnBatteries = $true
         }
         # Determine if ExecutionTimeLimit is set
         If ([String]::IsNullOrEmpty($this.Settings.ExecutionTimeLimit) -eq $false) {
+            # ExecutionTimeLimit is set; Try to convert it to a TimeSpan
             Try {
                 $SettingsParameters.ExecutionTimeLimit = [System.Xml.XmlConvert]::ToTimeSpan([String]$this.Settings.ExecutionTimeLimit)
+                # Success
             } Catch {
+                # Failure
                 $this.ozoLogger.Write(($this.Name + " Settings.ExecutionTimeLimit value '" + $this.Settings.ExecutionTimeLimit + "' is not a valid duration and will be ignored."), "Warning")
             }
         }
         # Determine if Hidden is true
         If ($this.Settings.Hidden -eq $true) {
+            # Hidden is true
             $SettingsParameters.Hidden = $true
         }
         # Determine if IdleSettings.StopOnIdleEnd is false
         If ($null -ne $this.Settings.IdleSettings -And $this.Settings.IdleSettings.StopOnIdleEnd -eq $false) {
+            # IdleSettings.StopOnIdleEnd is false
             $SettingsParameters.DontStopOnIdleEnd = $true
         }
         # Determine if IdleSettings.RestartOnIdle is true
         If ($null -ne $this.Settings.IdleSettings -And $this.Settings.IdleSettings.RestartOnIdle -eq $true) {
+            # IdleSettings.RestartOnIdle is true
             $SettingsParameters.RestartOnIdle = $true
         }
         # Determine if MultipleInstances is set
         If ([String]::IsNullOrEmpty($this.Settings.MultipleInstances) -eq $false) {
+            # MultipleInstances is set
             $SettingsParameters.MultipleInstances = $this.Settings.MultipleInstances
         }
         # Determine if Priority is set
         If ($null -ne $this.Settings.Priority) {
+            # Priority is set
             $SettingsParameters.Priority = $this.GetPriorityValue()
         }
         # Determine if RunOnlyIfNetworkAvailable is true
         If ($this.Settings.RunOnlyIfNetworkAvailable -eq $true) {
+            # RunOnlyIfNetworkAvailable is true
             $SettingsParameters.RunOnlyIfNetworkAvailable = $true
         }
         # Determine if WakeToRun is true
         If ($this.Settings.WakeToRun -eq $true) {
+            # WakeToRun is true
             $SettingsParameters.WakeToRun = $true
         }
         # Return
